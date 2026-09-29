@@ -1,0 +1,4 @@
+volume/TP1/dash/content/
+volume/TP1/results/*
+!volume/TP1/results/README.md
+volume/TP1/tools/
