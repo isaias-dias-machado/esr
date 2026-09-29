@@ -1,0 +1,29 @@
+services:
+  core: 
+    build: 
+      context: container
+    container_name: core
+    command: core-daemon
+    environment:
+      - DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./volume:/volume
+      - ./.bashrc:/root/.bashrc
+      - ./topologies:/root/.coregui/xmls/topologies
+    privileged: true
+    stdin_open: true
+    tty: true
+  core-for-mac:
+    build: container
+    container_name: core
+    command: core-daemon
+    environment:
+      - DISPLAY
+    volumes:
+      - ./volume:/volume
+      - ./.bashrc:/root/.bashrc
+      - ./topologies:/root/.coregui/xmls/topologies
+    privileged: true
+    stdin_open: true
+    tty: true

@@ -1,0 +1,42 @@
+ESR TP1 2026/27 - Provided Media
+
+All files include an AAC-LC audio track, mono, 48 kHz.
+The audio is synthetic and was generated specifically for TP1: two short reference tones per second (880 Hz and 440 Hz). The track can be used to verify playback continuity without introducing third-party audiovisual content.
+
+The values 500k, 1000k, and 2000k in the DASH representation filenames refer to the approximate bitrate of the VIDEO component. The audio track adds a small additional bitrate to the total stream.
+
+--- video_ref.mp4
+video: H.264 High, 1280x720, 25 fps, ~2.08 Mbit/s
+audio: AAC-LC, mono, 48 kHz, synthetic reference audio
+duration: 20.08 s
+
+--- video_360p_500k.mp4 (R1)
+video: H.264 High, 640x360, 25 fps, ~0.50 Mbit/s
+audio: AAC-LC, mono, 48 kHz, synthetic reference audio
+duration: 135.00 s
+
+--- video_540p_1000k.mp4 (R2)
+video: H.264 High, 960x540, 25 fps, ~1.00 Mbit/s
+audio: AAC-LC, mono, 48 kHz, synthetic reference audio
+duration: 135.00 s
+
+--- video_720p_2000k.mp4 (R3)
+video: H.264 High, 1280x720, 25 fps, ~2.01 Mbit/s
+audio: AAC-LC, mono, 48 kHz, synthetic reference audio
+duration: 135.00 s
+
+--- video_rtp.mp4
+video: H.264 High, 960x540, 25 fps, ~1.03 Mbit/s
+audio: AAC-LC, mono, 48 kHz, synthetic reference audio
+duration: 30.08 s
+
+Content Source
+
+The videos were generated specifically for TP1 using FFmpeg's testsrc2 source.
+The three DASH representations were produced from the same source and share the same timeline.
+The audio was also generated using FFmpeg synthetic filters.
+No third-party audiovisual content is included.
+
+Note for Stage 3
+
+The video_rtp.mp4 file contains audio, but the RTP commands in the lab guide use -an and transmit only the video component, keeping the RTP/RTCP experiment focused and simple. The audio remains available for local playback and inspection using ffplay/ffprobe.

@@ -1,0 +1,7 @@
+Validated target CORE build:
+release-9.2.1-2-ga5cff7f9
+
+Topology generator notes:
+- Streamer and PC1-PC4 use model="PC" (DefaultRoute only).
+- Switch ports are assigned explicit unique interface IDs to avoid duplicate
+  interface(0) errors when the complete scenario is submitted in DEFINITION state.

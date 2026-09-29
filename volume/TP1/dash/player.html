@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESR TP1 - MPEG-DASH</title>
+  <style>
+    body { font-family: sans-serif; margin: 1.2rem; max-width: 980px; }
+    video { width: 100%; max-width: 960px; background: #111; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: .6rem; margin-top: .8rem; }
+    .card { border: 1px solid #bbb; border-radius: 6px; padding: .65rem; }
+    .label { font-size: .8rem; opacity: .75; }
+    .value { font-size: 1.2rem; font-weight: 600; }
+    #events { width: 100%; height: 11rem; font-family: monospace; margin-top: .8rem; box-sizing: border-box; }
+    .ok { color: #176b27; }
+    .err { color: #9c1c1c; font-weight: 600; }
+    .controls { display:flex; flex-wrap:wrap; gap:.45rem; align-items:center; margin:.8rem 0; }
+    button { padding:.45rem .7rem; cursor:pointer; }
+    .hint { font-size:.9rem; color:#444; }
+  </style>
+</head>
+<body>
+  <h1>ESR TP1 - MPEG-DASH Player</h1>
+  <p>Manifest: <code>content/video_manifest.mpd</code></p>
+  <p id="status">Initializing...</p>
+  <p><strong>Audio:</strong> the player starts muted to allow autoplay. Use the video volume control to enable the reference audio track.</p>
+  <video id="videoPlayer" controls autoplay muted></video>
+
+  <div class="grid">
+    <div class="card"><div class="label">Current representation</div><div class="value" id="representation">-</div></div>
+    <div class="card"><div class="label">Resolution</div><div class="value" id="resolution">-</div></div>
+    <div class="card"><div class="label">Nominal bitrate</div><div class="value" id="bitrate">-</div></div>
+    <div class="card"><div class="label">Estimated throughput</div><div class="value" id="throughput">-</div></div>
+    <div class="card"><div class="label">Buffer</div><div class="value" id="buffer">-</div></div>
+    <div class="card"><div class="label">Actual rebuffering</div><div class="value" id="stalls">0</div></div>
+    <div class="card"><div class="label">Video time</div><div class="value" id="mediaTime">0.0 s</div></div>
+    <div class="card"><div class="label">Marked network condition</div><div class="value" id="networkCondition">-</div></div>
+  </div>
+
+  <h2>Mark bandwidth changes</h2>
+  <p class="hint">After clicking <strong>Apply</strong> in CORE, click the corresponding button to record the time of the change in the log. The buttons only record the network condition; they do not change the CORE configuration.</p>
+  <div class="controls">
+    <button type="button" data-network="10 Mbit/s">10 Mbit/s</button>
+    <button type="button" data-network="2 Mbit/s">2 Mbit/s</button>
+    <button type="button" data-network="800 kbit/s">800 kbit/s</button>
+    <button type="button" data-network="5 Mbit/s">5 Mbit/s</button>
+    <button type="button" id="saveLog">Save log</button>
+  </div>
+
+  <h2>Relevant events</h2>
+  <textarea id="events" readonly></textarea>
+
+  <script src="dash.all.min.js"></script>
+  <script>
+  (() => {
+    const manifest = 'content/video_manifest.mpd';
+    const status = document.getElementById('status');
+    const logBox = document.getElementById('events');
+    const video = document.getElementById('videoPlayer');
+    const experimentStart = performance.now();
+    let stalls = 0;
+    let playbackStarted = false;
+    let startupWaitingLogged = false;
+    let stallActive = false;
+    let lastRepId = null;
+
+    const elapsed = () => ((performance.now() - experimentStart) / 1000).toFixed(1);
+    const mediaTime = () => Number.isFinite(video.currentTime) ? video.currentTime.toFixed(1) : '-';
+    const log = (msg) => {
+      const now = new Date().toLocaleTimeString();
+      logBox.value += `[${now} | T+${elapsed()}s | media=${mediaTime()}s] ${msg}\n`;
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    const repLabel = (rep) => {
+      if (!rep) return '-';
+      const labels = { '0': 'R1', '1': 'R2', '2': 'R3' };
+      const id = String(rep.id ?? '?');
+      return `${labels[id] ?? 'R?'} (id=${id})`;
+    };
+
+    if (typeof dashjs === 'undefined') {
+      status.className = 'err';
+      status.textContent = 'ERROR: dash.js could not be loaded. Check dash.all.min.js.';
+      return;
+    }
+
+    const player = dashjs.MediaPlayer().create();
+    // Deliberately short buffer to make ABR transitions observable
+    // during the 120 s experiment. dash.js 5 uses bufferTimeDefault.
+    player.updateSettings({
+      streaming: {
+        buffer: {
+          bufferTimeDefault: 8,
+          bufferTimeAtTopQuality: 10,
+          bufferTimeAtTopQualityLongForm: 10
+        }
+      }
+    });
+    player.initialize(video, manifest, true);
+    status.className = 'ok';
+    status.textContent = 'Player initialized. Automatic ABR; target buffer 8-10 s.';
+    log('Experiment started; automatic ABR; target buffer 8-10 s');
+
+    const events = dashjs.MediaPlayer.events;
+    player.on(events.QUALITY_CHANGE_RENDERED, () => {
+      const rep = player.getCurrentRepresentationForType('video');
+      if (!rep) return;
+      const id = String(rep.id ?? '?');
+      if (id === lastRepId) return;
+      lastRepId = id;
+      const kb = rep.bitrateInKbit ?? (rep.bandwidth ? rep.bandwidth / 1000 : NaN);
+      log(`Representation -> ${repLabel(rep)} (${Number.isFinite(kb) ? Math.round(kb) : '?'} kbit/s)`);
+    });
+
+    video.addEventListener('waiting', () => {
+      const nearEnd = Number.isFinite(video.duration) && (video.duration - video.currentTime) < 0.5;
+      if (video.ended || nearEnd) return;
+      if (!playbackStarted) {
+        if (!startupWaitingLogged) {
+          startupWaitingLogged = true;
+          log('Initial buffering');
+        }
+        return;
+      }
+      if (!stallActive) {
+        stallActive = true;
+        stalls += 1;
+        document.getElementById('stalls').textContent = String(stalls);
+        log('Rebuffering during playback');
+      }
+    });
+
+    video.addEventListener('playing', () => {
+      if (!playbackStarted) {
+        playbackStarted = true;
+        log('Playback started');
+      } else if (stallActive) {
+        stallActive = false;
+        log('Playback resumed after rebuffering');
+      }
+    });
+
+    video.addEventListener('ended', () => {
+      stallActive = false;
+      log('Normal end of playback');
+    });
+
+    document.querySelectorAll('[data-network]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const value = button.dataset.network;
+        document.getElementById('networkCondition').textContent = value;
+        log(`Marked network condition -> ${value}`);
+      });
+    });
+
+    document.getElementById('saveLog').addEventListener('click', () => {
+      const blob = new Blob([logBox.value], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ESR-TP1-DASH-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+
+    setInterval(() => {
+      try {
+        const rep = player.getCurrentRepresentationForType('video');
+        const thr = player.getAverageThroughput('video');
+        const buf = player.getBufferLength('video');
+        if (rep) {
+          document.getElementById('representation').textContent = repLabel(rep);
+          document.getElementById('resolution').textContent = `${rep.width ?? '?'}x${rep.height ?? '?'}`;
+          const kb = rep.bitrateInKbit ?? (rep.bandwidth ? rep.bandwidth / 1000 : NaN);
+          document.getElementById('bitrate').textContent = Number.isFinite(kb) ? `${Math.round(kb)} kbit/s` : '-';
+        }
+        document.getElementById('throughput').textContent = Number.isFinite(thr) ? `${Math.round(thr)} kbit/s` : '-';
+        document.getElementById('buffer').textContent = Number.isFinite(buf) ? `${buf.toFixed(1)} s` : '-';
+        document.getElementById('mediaTime').textContent = Number.isFinite(video.currentTime) ? `${video.currentTime.toFixed(1)} s` : '-';
+      } catch (err) {
+        // During startup, some metrics are not yet available.
+      }
+    }, 500);
+  })();
+  </script>
+</body>
+</html>
