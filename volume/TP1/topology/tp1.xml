@@ -82,7 +82,8 @@
     <link node1="5" node2="6">
       <iface1 id="1" name="eth1" mac="00:00:00:aa:00:04" ip4="10.0.12.1" ip4_mask="30"/>
       <iface2 id="0" name="eth0" mac="00:00:00:aa:00:05" ip4="10.0.12.2" ip4_mask="30"/>
-      <options delay="10000" bandwidth="10000000" loss="0.0" dup="0" jitter="0" unidirectional="0" buffer="0"/>
+      <!-- <options delay="10000" bandwidth="10000000" loss="0.0" dup="0" jitter="0" unidirectional="0" buffer="0"/> -->
+      <options delay="80000" bandwidth="10000000" loss="1.0" dup="0" jitter="0" unidirectional="0" buffer="0"/> 
     </link>
     <link node1="6" node2="7">
       <iface1 id="1" name="eth1" mac="00:00:00:aa:00:06" ip4="10.0.2.1" ip4_mask="24"/>
