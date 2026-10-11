@@ -1,0 +1,80 @@
+File name:           evidence/stage3/captures/PL36_E3_U1_PC3.pcap
+File type:           Wireshark/tcpdump/... - pcap
+File encapsulation:  Ethernet
+File timestamp precision:  microseconds (6)
+Packet size limit:   file hdr: 262144 bytes
+Number of packets:   6609
+File size:           8886 kB
+Data size:           8781 kB
+Capture duration:    65.474684 seconds
+Earliest packet time: 2026-10-09 20:45:13.869138
+Latest packet time:   2026-10-09 20:46:19.343822
+Data byte rate:      134 kBps
+Data bit rate:       1072 kbps
+Average packet size: 1328.65 bytes
+Average packet rate: 100 packets/s
+SHA256:              651ce30f1a7eb960ede49553cefc4fe3a3a0e01041dbb207b0965c79f84e08ce
+SHA1:                bb4380ef684a486100fbaf8a2379a6e5a6b38c6a
+Strict time order:   True
+Number of interfaces in file: 1
+Interface #0 info:
+                     Encapsulation = Ethernet (1 - ether)
+                     Capture length = 262144
+                     Time precision = microseconds (6)
+                     Time ticks per second = 1000000
+                     Number of stat entries = 0
+                     Number of packets = 6609
+
+File name:           evidence/stage3/captures/PL36_E3_U2_PC3_PC4.pcap
+File type:           Wireshark/tcpdump/... - pcap
+File encapsulation:  Ethernet
+File timestamp precision:  microseconds (6)
+Packet size limit:   file hdr: 262144 bytes
+Number of packets:   18 k
+File size:           25 MB
+Data size:           24 MB
+Capture duration:    93.006928 seconds
+Earliest packet time: 2026-10-09 20:48:18.586110
+Latest packet time:   2026-10-09 20:49:51.593038
+Data byte rate:      266 kBps
+Data bit rate:       2131 kbps
+Average packet size: 1330.01 bytes
+Average packet rate: 200 packets/s
+SHA256:              eae54ad57333c5564f76dbc89cfb5762c4dec2d9718d6ec2474396396b4d7833
+SHA1:                08d9521270dd6164b087e8e0bdd85c4ce5d0c737
+Strict time order:   True
+Number of interfaces in file: 1
+Interface #0 info:
+                     Encapsulation = Ethernet (1 - ether)
+                     Capture length = 262144
+                     Time precision = microseconds (6)
+                     Time ticks per second = 1000000
+                     Number of stat entries = 0
+                     Number of packets = 18632
+
+File name:           evidence/stage3/captures/PL36_E3_multicast_PC3_PC4.pcap
+File type:           Wireshark/tcpdump/... - pcap
+File encapsulation:  Ethernet
+File timestamp precision:  microseconds (6)
+Packet size limit:   file hdr: 262144 bytes
+Number of packets:   3705
+File size:           4982 kB
+Data size:           4923 kB
+Capture duration:    36.756238 seconds
+Earliest packet time: 2026-10-09 21:00:05.432414
+Latest packet time:   2026-10-09 21:00:42.188652
+Data byte rate:      133 kBps
+Data bit rate:       1071 kbps
+Average packet size: 1328.90 bytes
+Average packet rate: 100 packets/s
+SHA256:              d2a12f108fbe4bd358ba9ffaa66df0abe179961ac7129df351e5f57ce771757d
+SHA1:                8ca8e52f1a9b066f881e8bc96c2794c10561373d
+Strict time order:   True
+Number of interfaces in file: 1
+Interface #0 info:
+                     Encapsulation = Ethernet (1 - ether)
+                     Capture length = 262144
+                     Time precision = microseconds (6)
+                     Time ticks per second = 1000000
+                     Number of stat entries = 0
+                     Number of packets = 3705

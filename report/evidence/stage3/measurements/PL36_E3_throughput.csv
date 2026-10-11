@@ -1,0 +1,4 @@
+capture,start_s,end_s,frame_bytes,Mbit_s
+PL36_E3_U1_PC3.pcap,0,30,4025970,1.073592
+PL36_E3_U2_PC3_PC4.pcap,0,30,7993290,2.131544
+PL36_E3_multicast_PC3_PC4.pcap,0,30,4025970,1.073592

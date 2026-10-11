@@ -1,0 +1,163 @@
+[
+  {
+    "file": "PL36_E3_U1_PC3.pcap",
+    "duration_s": 65.47468400001526,
+    "frames": 6609,
+    "interval_s": [
+      0,
+      30
+    ],
+    "frame_bytes": 4025970,
+    "selected_packets": 3030,
+    "rate_Mbit_s": 1.073592,
+    "flows": {
+      "10.0.1.10:49250 -> 10.0.2.13:5004": {
+        "first_frame": 1,
+        "ssrc": "0xdda6aa31",
+        "pt": 96,
+        "sequence": 10106,
+        "timestamp": 403605226,
+        "packets": 6596
+      }
+    },
+    "rtcp_counts": {
+      "200": 13
+    },
+    "rtcp_examples": [
+      {
+        "frame": 291,
+        "type": 200,
+        "src": "10.0.1.10:49251",
+        "dst": "10.0.2.13:5005",
+        "ssrc": "0xdda6aa31",
+        "ntp_seconds": 4000563916,
+        "ntp_fraction": 2804613644,
+        "rtp_timestamp": 403843276,
+        "sender_packets": 6624,
+        "sender_octets": 8462551
+      },
+      {
+        "frame": 796,
+        "type": 200,
+        "src": "10.0.1.10:49251",
+        "dst": "10.0.2.13:5005",
+        "ssrc": "0xdda6aa31",
+        "ntp_seconds": 4000563921,
+        "ntp_fraction": 2972117368,
+        "rtp_timestamp": 404296786,
+        "sender_packets": 7128,
+        "sender_octets": 9103797
+      }
+    ]
+  },
+  {
+    "file": "PL36_E3_U2_PC3_PC4.pcap",
+    "duration_s": 93.00692796707153,
+    "frames": 18632,
+    "interval_s": [
+      0,
+      30
+    ],
+    "frame_bytes": 7993290,
+    "selected_packets": 6011,
+    "rate_Mbit_s": 2.131544,
+    "flows": {
+      "10.0.1.10:49250 -> 10.0.2.13:5004": {
+        "first_frame": 1,
+        "ssrc": "0xdda6aa31",
+        "pt": 96,
+        "sequence": 28723,
+        "timestamp": 420230026,
+        "packets": 9343
+      },
+      "10.0.1.10:40514 -> 10.0.2.14:5004": {
+        "first_frame": 4,
+        "ssrc": "0x38172c9f",
+        "pt": 96,
+        "sequence": 7221,
+        "timestamp": 31570803,
+        "packets": 9252
+      }
+    },
+    "rtcp_counts": {
+      "200": 37
+    },
+    "rtcp_examples": [
+      {
+        "frame": 107,
+        "type": 200,
+        "src": "10.0.1.10:40515",
+        "dst": "10.0.2.14:5005",
+        "ssrc": "0x38172c9f",
+        "ntp_seconds": 4000564099,
+        "ntp_fraction": 450971566,
+        "rtp_timestamp": 31604103,
+        "sender_packets": 7123,
+        "sender_octets": 9097198
+      },
+      {
+        "frame": 758,
+        "type": 200,
+        "src": "10.0.1.10:49251",
+        "dst": "10.0.2.13:5005",
+        "ssrc": "0xdda6aa31",
+        "ntp_seconds": 4000564102,
+        "ntp_fraction": 2100239007,
+        "rtp_timestamp": 420568516,
+        "sender_packets": 25329,
+        "sender_octets": 32343062
+      }
+    ]
+  },
+  {
+    "file": "PL36_E3_multicast_PC3_PC4.pcap",
+    "duration_s": 36.75623798370361,
+    "frames": 3705,
+    "interval_s": [
+      0,
+      30
+    ],
+    "frame_bytes": 4025970,
+    "selected_packets": 3030,
+    "rate_Mbit_s": 1.073592,
+    "flows": {
+      "10.0.1.10:45394 -> 239.10.10.10:5004": {
+        "first_frame": 1,
+        "ssrc": "0x3717b922",
+        "pt": 96,
+        "sequence": 32059,
+        "timestamp": 977120236,
+        "packets": 3698
+      }
+    },
+    "rtcp_counts": {
+      "200": 7
+    },
+    "rtcp_examples": [
+      {
+        "frame": 299,
+        "type": 200,
+        "src": "10.0.1.10:45395",
+        "dst": "239.10.10.10:5005",
+        "ssrc": "0x3717b922",
+        "ntp_seconds": 4000564808,
+        "ntp_fraction": 2327872274,
+        "rtp_timestamp": 977376556,
+        "sender_packets": 29830,
+        "sender_octets": 38083864
+      },
+      {
+        "frame": 830,
+        "type": 200,
+        "src": "10.0.1.10:45395",
+        "dst": "239.10.10.10:5005",
+        "ssrc": "0x3717b922",
+        "ntp_seconds": 4000564813,
+        "ntp_fraction": 2482491097,
+        "rtp_timestamp": 977829796,
+        "sender_packets": 30361,
+        "sender_octets": 38767465
+      }
+    ]
+  }
+]

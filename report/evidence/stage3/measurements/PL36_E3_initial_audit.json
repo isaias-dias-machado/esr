@@ -1,0 +1,77 @@
+{
+  "method": "Classic Ethernet PCAP; IPv4/UDP; RTP v2 destination port 5004; RTCP compound headers parsed by declared lengths. Rate uses sum of original frame lengths / first-to-last packet interval; includes captured RTP and RTCP, excludes physical-link overhead. Preliminary full-capture intervals differ; capture location and receiver state unconfirmed.",
+  "captures": [
+    {
+      "file": "PL36_E3_U1_PC3.pcap",
+      "sha256": "651ce30f1a7eb960ede49553cefc4fe3a3a0e01041dbb207b0965c79f84e08ce",
+      "packets": 6609,
+      "duration_s": 65.47468400001526,
+      "captured_frame_bytes": 8781073,
+      "whole_capture_frame_rate_Mbit_s": 1.0729121502897765,
+      "rtp_flows": {
+        "10.0.1.10:49250 -> 10.0.2.13:5004 SSRC 0xdda6aa31": {
+          "packets": 6596,
+          "first_header": {
+            "payload_type": 96,
+            "sequence": 10106,
+            "timestamp": 403605226
+          }
+        }
+      },
+      "rtcp_packet_types": {
+        "10.0.1.10:49251 -> 10.0.2.13:5005 RTCP type 200": 13
+      }
+    },
+    {
+      "file": "PL36_E3_U2_PC3_PC4.pcap",
+      "sha256": "eae54ad57333c5564f76dbc89cfb5762c4dec2d9718d6ec2474396396b4d7833",
+      "packets": 18632,
+      "duration_s": 93.00692796707153,
+      "captured_frame_bytes": 24780812,
+      "whole_capture_frame_rate_Mbit_s": 2.1315239663671917,
+      "rtp_flows": {
+        "10.0.1.10:49250 -> 10.0.2.13:5004 SSRC 0xdda6aa31": {
+          "packets": 9343,
+          "first_header": {
+            "payload_type": 96,
+            "sequence": 28723,
+            "timestamp": 420230026
+          }
+        },
+        "10.0.1.10:40514 -> 10.0.2.14:5004 SSRC 0x38172c9f": {
+          "packets": 9252,
+          "first_header": {
+            "payload_type": 96,
+            "sequence": 7221,
+            "timestamp": 31570803
+          }
+        }
+      },
+      "rtcp_packet_types": {
+        "10.0.1.10:40515 -> 10.0.2.14:5005 RTCP type 200": 19,
+        "10.0.1.10:49251 -> 10.0.2.13:5005 RTCP type 200": 18
+      }
+    },
+    {
+      "file": "PL36_E3_multicast_PC3_PC4.pcap",
+      "sha256": "d2a12f108fbe4bd358ba9ffaa66df0abe179961ac7129df351e5f57ce771757d",
+      "packets": 3705,
+      "duration_s": 36.75623798370361,
+      "captured_frame_bytes": 4923566,
+      "whole_capture_frame_rate_Mbit_s": 1.0716147832502187,
+      "rtp_flows": {
+        "10.0.1.10:45394 -> 239.10.10.10:5004 SSRC 0x3717b922": {
+          "packets": 3698,
+          "first_header": {
+            "payload_type": 96,
+            "sequence": 32059,
+            "timestamp": 977120236
+          }
+        }
+      },
+      "rtcp_packet_types": {
+        "10.0.1.10:45395 -> 239.10.10.10:5005 RTCP type 200": 7
+      }
+    }
+  ]
+}
