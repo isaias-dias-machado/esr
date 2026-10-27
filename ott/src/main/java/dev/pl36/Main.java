@@ -1,5 +1,6 @@
 package dev.pl36;
 
+import dev.pl36.routing.RoutingTable;
 import dev.pl36.scenario.Scenario;
 import dev.pl36.scenario.ScenarioParser;
 
@@ -16,12 +17,24 @@ import java.util.HashMap;
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
+    private static final String NODE_ID_ENV = "OTT_NODE_ID";
+
+    private static final String HELP = """
+            usage: OTT_NODE_ID=<node id> program_name <config_file_path>
+            """;
+
     public static void main(String[] args) {
-        var pid = args[1];
-        var scenarioPath = Path.of(args[2]);
+        if (args.length != 1) {
+            throw new IllegalArgumentException(HELP);
+        }
+
+        int selfId = readNodeIdFromEnvironment();
+        Path scenarioPath = Path.of(args[0]);
 
         try {
             Scenario scenario = ScenarioParser.parse(scenarioPath);
+            RoutingTable routingTable = RoutingTable.from(scenario, selfId);
+            System.out.println(routingTable);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -44,6 +57,20 @@ public class Main {
 //        } catch (Exception e) {
 //            throw new RuntimeException(e);
 //        }
+    }
+
+    private static int readNodeIdFromEnvironment() {
+        String rawNodeId = System.getenv(NODE_ID_ENV);
+        if (rawNodeId == null || rawNodeId.isBlank()) {
+            throw new IllegalStateException(NODE_ID_ENV + " is not set");
+        }
+
+        try {
+            return Integer.parseInt(rawNodeId.trim());
+        } catch (NumberFormatException cause) {
+            throw new IllegalStateException(
+                    NODE_ID_ENV + " must be an integer, got: " + rawNodeId, cause);
+        }
     }
 
     class TCPClient {

@@ -5,118 +5,78 @@ import dev.pl36.scenario.Node;
 import dev.pl36.scenario.Scenario;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
- * A direct-neighbour routing table built from a {@link Scenario}.
+ * The routing state of one running overlay process.
  *
- * <p>Purpose: turn the scenario's link list into a lookup that answers "which
- * nodes can this overlay node reach with a single link?", without walking the
- * link list on every call.</p>
+ * <p>Purpose: hold the node this process represents and only the nodes directly
+ * linked to it. The process does not need, and does not receive, the rest of
+ * the scenario topology.</p>
  *
- * <p>Invariants: every node declared in the scenario has an entry, even when
- * it has no links; each neighbour id refers to a declared node; links are
- * undirected, so a pair {@code [a, b]} appears both under {@code a} and under
- * {@code b}; the table and its sets are immutable. Lookups are keyed by
- * {@link Node#id()}, not by IP address.</p>
+ * <p>Invariants: {@code self} is a node declared in the scenario; every key in
+ * {@code neighbours} is the id of a declared node; every value is the node with
+ * that id; links are undirected; the neighbour map is immutable.</p>
  *
- * <p>Failure modes: {@link #from(Scenario)} throws
- * {@link NullPointerException} for a {@code null} scenario and
- * {@link IllegalArgumentException} if the scenario has a duplicate node id, a
- * link to an undeclared node, or a link from a node to itself.
- * {@link #neighboursOf(int)} throws {@link IllegalArgumentException} for an
- * undeclared node id.</p>
+ * <p>Failure modes: {@link #from(Scenario, int)} throws
+ * {@link NullPointerException} for a {@code null} scenario,
+ * {@link IllegalArgumentException} if the given node id is not declared or a
+ * local link refers to an unknown node, and {@link IllegalArgumentException} if
+ * the scenario contains a link from a node to itself.</p>
  */
-public final class RoutingTable {
+public record RoutingTable(Node self, Map<Integer, Node> neighbours) {
 
-    private final Map<Integer, Set<Integer>> neighboursByNodeId;
-
-    private RoutingTable(Map<Integer, Set<Integer>> neighboursByNodeId) {
-        this.neighboursByNodeId = neighboursByNodeId;
+    public RoutingTable {
+        Objects.requireNonNull(self, "self");
+        neighbours = Map.copyOf(neighbours);
     }
 
     /**
-     * Purpose: build the direct-neighbour table described by {@code scenario}.
+     * Purpose: build the local routing table for one process.
      *
-     * @param scenario scenario whose links should become routing entries
-     * @return an immutable table keyed by node id
+     * @param scenario the whole parsed scenario
+     * @param selfId   id of the node represented by the running process
+     * @return a table containing only {@code selfId} and its direct neighbours
      * @throws NullPointerException     if {@code scenario} is {@code null}
-     * @throws IllegalArgumentException if the scenario breaks a node/link rule
+     * @throws IllegalArgumentException if {@code selfId} is unknown or a local
+     *                                  link refers to an unknown node
      */
-    public static RoutingTable from(Scenario scenario) {
+    public static RoutingTable from(Scenario scenario, int selfId) {
         Objects.requireNonNull(scenario, "scenario");
 
-        Map<Integer, Set<Integer>> mutableTable = new HashMap<>();
-        for (Node node : scenario.nodes()) {
-            if (mutableTable.put(node.id(), new HashSet<>()) != null) {
-                throw new IllegalArgumentException("duplicate node id: " + node.id());
-            }
-        }
+        Node self = requireNode(scenario, selfId);
+        Map<Integer, Node> neighbours = new HashMap<>();
 
         for (Neighbor neighbor : scenario.neighbors()) {
-            int firstId = neighbor.first();
-            int secondId = neighbor.second();
-
-            if (firstId == secondId) {
-                throw new IllegalArgumentException("node linked to itself: " + firstId);
-            }
-
-            Set<Integer> firstNeighbours = mutableTable.get(firstId);
-            if (firstNeighbours == null) {
+            if (neighbor.first() == neighbor.second()) {
                 throw new IllegalArgumentException(
-                        "link " + neighbor.pair() + " refers to unknown node id " + firstId);
+                        "node linked to itself: " + neighbor.first());
             }
 
-            Set<Integer> secondNeighbours = mutableTable.get(secondId);
-            if (secondNeighbours == null) {
-                throw new IllegalArgumentException(
-                        "link " + neighbor.pair() + " refers to unknown node id " + secondId);
+            if (neighbor.first() == selfId) {
+                int neighbourId = neighbor.second();
+                neighbours.put(neighbourId, requireNode(scenario, neighbourId));
             }
 
-            firstNeighbours.add(secondId);
-            secondNeighbours.add(firstId);
+            if (neighbor.second() == selfId) {
+                int neighbourId = neighbor.first();
+                neighbours.put(neighbourId, requireNode(scenario, neighbourId));
+            }
         }
 
-        Map<Integer, Set<Integer>> immutableTable = new HashMap<>();
-        mutableTable.forEach((nodeId, neighbours) ->
-                immutableTable.put(nodeId, Set.copyOf(neighbours)));
-
-        return new RoutingTable(Map.copyOf(immutableTable));
+        return new RoutingTable(self, neighbours);
     }
 
     /**
-     * Purpose: expose the whole table for callers that need to iterate over
-     * every node, for example to serialise it.
-     *
-     * @return immutable map from node id to the ids of its direct neighbours
+     * Purpose: find the declared node with {@code nodeId}.
      */
-    public Map<Integer, Set<Integer>> asMap() {
-        return neighboursByNodeId;
-    }
-
-    /**
-     * Purpose: get the direct neighbours of one node.
-     *
-     * @param nodeId id of a node declared in the original scenario
-     * @return immutable ids of the nodes linked directly to {@code nodeId}
-     * @throws IllegalArgumentException if {@code nodeId} is not in the table
-     */
-    public Set<Integer> neighboursOf(int nodeId) {
-        Set<Integer> neighbours = neighboursByNodeId.get(nodeId);
-        if (neighbours == null) {
-            throw new IllegalArgumentException("unknown node id: " + nodeId);
+    private static Node requireNode(Scenario scenario, int nodeId) {
+        for (Node node : scenario.nodes()) {
+            if (node.id() == nodeId) {
+                return node;
+            }
         }
-        return neighbours;
-    }
-
-    /**
-     * Purpose: check whether a node exists in the table, which is useful when
-     * the id comes from untrusted input.
-     */
-    public boolean containsNode(int nodeId) {
-        return neighboursByNodeId.containsKey(nodeId);
+        throw new IllegalArgumentException("unknown node id: " + nodeId);
     }
 }
