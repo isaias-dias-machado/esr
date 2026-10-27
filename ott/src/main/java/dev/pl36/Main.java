@@ -17,19 +17,17 @@ import java.util.HashMap;
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
-    private static final String NODE_ID_ENV = "OTT_NODE_ID";
-
     private static final String HELP = """
-            usage: OTT_NODE_ID=<node id> program_name <config_file_path>
+            usage: program_name <node_id> <config_file_path>
             """;
 
     public static void main(String[] args) {
-        if (args.length != 1) {
+        if (args.length != 2) {
             throw new IllegalArgumentException(HELP);
         }
 
-        int selfId = readNodeIdFromEnvironment();
-        Path scenarioPath = Path.of(args[0]);
+        int selfId = parseNodeId(args[0]);
+        Path scenarioPath = Path.of(args[1]);
 
         try {
             Scenario scenario = ScenarioParser.parse(scenarioPath);
@@ -59,17 +57,12 @@ public class Main {
 //        }
     }
 
-    private static int readNodeIdFromEnvironment() {
-        String rawNodeId = System.getenv(NODE_ID_ENV);
-        if (rawNodeId == null || rawNodeId.isBlank()) {
-            throw new IllegalStateException(NODE_ID_ENV + " is not set");
-        }
-
+    private static int parseNodeId(String rawNodeId) {
         try {
-            return Integer.parseInt(rawNodeId.trim());
+            return Integer.parseInt(rawNodeId);
         } catch (NumberFormatException cause) {
-            throw new IllegalStateException(
-                    NODE_ID_ENV + " must be an integer, got: " + rawNodeId, cause);
+            throw new IllegalArgumentException(
+                    "node id must be an integer, got: " + rawNodeId, cause);
         }
     }
 
