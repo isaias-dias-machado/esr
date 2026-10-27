@@ -16,20 +16,21 @@ source "$TP1_ROOT/scripts/tp1-env.sh"
 # curl provided with the lab package, compiled with HTTP/3 support
 # ------------------------------------------------------------
 
-CURL_H3="$TP1_ROOT/tools/curl-http3/bin/curl"
+# CURL_H3="$TP1_ROOT/tools/curl-http3/bin/curl"
+CURL_H3="curl --http3-only"
 
-if [[ ! -x "$CURL_H3" ]]; then
-    echo "ERROR: curl with HTTP/3 support was not found." >&2
-    echo "Expected at:" >&2
-    echo "  $CURL_H3" >&2
-    exit 1
-fi
-
-# Confirm that the provided curl supports HTTP/3
-if ! "$CURL_H3" -V 2>/dev/null | grep -q 'HTTP3'; then
-    echo "ERROR: the curl provided with the lab package does not have functional HTTP/3 support." >&2
-    exit 1
-fi
+#if [[ ! -x "$CURL_H3" ]]; then
+#    echo "ERROR: curl with HTTP/3 support was not found." >&2
+#    echo "Expected at:" >&2
+#    echo "  $CURL_H3" >&2
+#    exit 1
+#fi
+#
+## Confirm that the provided curl supports HTTP/3
+#if ! "$CURL_H3" -V 2>/dev/null | grep -q 'HTTP3'; then
+#    echo "ERROR: the curl provided with the lab package does not have functional HTTP/3 support." >&2
+#    exit 1
+#fi
 
 # ------------------------------------------------------------
 # Transfer
@@ -45,7 +46,7 @@ trap 'rm -f "$OUT"' EXIT
 
 echo "HTTP/3 -> $URL"
 
-"$CURL_H3" \
+curl \
     --http3-only \
     --insecure \
     --fail \

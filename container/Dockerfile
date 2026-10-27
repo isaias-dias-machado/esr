@@ -82,6 +82,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ffmpeg \
     nginx \
     unzip \
+    smcroute \
     firefox \
     && rm -rf /var/lib/apt/lists/*
 

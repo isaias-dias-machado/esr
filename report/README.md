@@ -1,6 +1,11 @@
 # ESR report — PL36
 
-Start with [Stage 3 results](stage3.md). Requirements are in the
+The report material is organized by stage. Stage 1 results are in
+[stage1.md](stage1.md), with source notes and screenshots in [stage1/](stage1/).
+Stage 2 results are in [stage2.md](stage2.md), with packet captures, theory
+notes, and screenshot evidence in [stage2/](stage2/).
+Stage 3 results are in [stage3.md](stage3.md).
+Stage 3 requirements are in the
 [assignment](ESR-TP1-26-27-EN.pdf), pp. 16–19; the working rules are in [AGENTS.md](AGENTS.md).
 
 ```text
@@ -8,6 +13,14 @@ report/
 ├── AGENTS.md
 ├── README.md
 ├── ESR-TP1-26-27-EN.pdf
+├── stage1.md
+├── stage1/
+│   ├── README.md
+│   ├── data.md             # existing probe, MPD and playback notes
+│   ├── evidence/           # existing Stage 1 Wireshark screenshots
+│   └── todo/               # Stage 1 corrections and evidence gaps
+├── stage2.md
+├── stage2/                 # Stage 2 captures, screenshots, and theory notes
 ├── stage3.md
 ├── evidence/
 │   └── stage3/
@@ -21,6 +34,8 @@ report/
 ```
 
 ## Work queue
+
+For Stage 1, use the [correction queue](stage1/todo/README.md).
 
 Start with the [Stage 3 requirement map](todo/00-stage3-requirements-map.md).
 
