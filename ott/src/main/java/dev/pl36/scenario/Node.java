@@ -12,12 +12,13 @@ import java.net.UnknownHostException;
  * <pre>
  * - id: 0
  *   ip_addr: 10.1.15.16/24
- *   port: 5000
  *   description: "n16"
  * </pre>
  *
- * <p>Invariants: {@code id} is unique inside a {@link Scenario}, {@code ipAddr}
- * is an IPv4 address in CIDR notation, and {@code port} is in {@code 0..65535}.</p>
+ * <p>Invariants: {@code id} is unique inside a {@link Scenario} and
+ * {@code ipAddr} is an IPv4 address in CIDR notation. The UDP port is not part
+ * of a node: it is shared by the whole scenario and lives in
+ * {@link Scenario#port()}.</p>
  *
  * <p>Failure modes: this record does no I/O. The invariants above are enforced
  * while reading the file by {@link ScenarioParser}; {@link #address()} and
@@ -27,7 +28,6 @@ import java.net.UnknownHostException;
 public record Node(
         int id,
         @JsonProperty("ip_addr") String ipAddr,
-        int port,
         String description) {
 
     /**
