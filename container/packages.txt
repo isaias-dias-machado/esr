@@ -1,1 +1,2 @@
 vim
+openjdk-21-jdk-headless
