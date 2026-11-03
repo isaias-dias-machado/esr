@@ -39,6 +39,7 @@ The report and the live demo must show:
 | `src/main/java/dev/pl36/Main.java` | Entry point `ott <node_id> <scenario.yaml>`; builds and prints the local routing table. TCP client/server sketches are commented out. |
 | `src/main/java/dev/pl36/scenario/` | `Scenario`, `ScenarioParser`, `Node`, `Neighbor`, `InvalidScenarioException`, `ParseScenarioDemo`. Strict YAML parsing and validation. |
 | `src/main/java/dev/pl36/routing/RoutingTable.java` | Per-process view: the local node plus its direct neighbours. Not yet a per-flow table. |
+| `src/main/java/dev/pl36/net/` | Shared seams of the overlay: `ControlMessage`/`WireCodec` (TCP control wire format), `DataPacketHeader` (UDP packet layout), `ControlMessenger`/`DataChannel` interfaces, `LoopbackMessenger` in-JVM fake. No real sockets yet. |
 | `resorces/cenario1.yaml`, `resorces/cenario2.yaml` | Test scenarios (see `context/scenarios.md`). |
 | `pom.xml` | Java 21, Jackson YAML, no wrapper and no shade/exec plugin. |
 
