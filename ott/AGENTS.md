@@ -78,11 +78,6 @@ docker compose build core   # build the emulator image
 - `./volume` on the host is mounted at `/volume` in the container. The TP2
   space is `volume/tp2/`, which contains `tp2-underlay.xml`.
 - `./topologies` is mounted at `/root/.coregui/xmls/topologies`.
-- The emulator image has **no JDK** (verified: `java` and `javac` are absent).
-  Build the JAR on the host and copy it through `/volume`. To run Java inside
-  the emulated nodes, add `openjdk-21-jdk-headless` to `container/packages.txt`
-  and rebuild with `docker compose build core`. If that package is unavailable
-  in the base image, fall back to `default-jdk-headless`.
 
 ## Coding conventions
 
