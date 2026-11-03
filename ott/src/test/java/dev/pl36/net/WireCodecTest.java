@@ -2,7 +2,6 @@ package dev.pl36.net;
 
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Purpose: verify the control wire format — roundtrip fidelity, rejection of
- * malformed frames, and forward compatibility of the envelope.
+ * malformed frames, and the length framing.
  */
 class WireCodecTest {
 
@@ -27,19 +26,6 @@ class WireCodecTest {
             ControlMessage decoded = WireCodec.decode(WireCodec.encode(message));
             assertEquals(message, decoded, "roundtrip changed: " + message);
         }
-    }
-
-    @Test
-    void decodeAcceptsEnvelopeWithUnknownFields() {
-        // Forward compatibility: a newer sender may add fields without
-        // breaking older receivers.
-        byte[] frame = frameOf("""
-                {"type":"KEEPALIVE","messageId":7,"flowId":null,"payload":"alive","cost":3}
-                """);
-
-        ControlMessage decoded = WireCodec.decode(frame);
-
-        assertEquals(new ControlMessage(MessageType.KEEPALIVE, 7L, null, "alive"), decoded);
     }
 
     @Test
@@ -72,16 +58,11 @@ class WireCodecTest {
     }
 
     @Test
-    void decodeRejectsGarbageJsonBody() {
-        assertThrows(IllegalArgumentException.class, () -> WireCodec.decode(frameOf("xyz")));
-    }
+    void decodeRejectsGarbageBody() {
+        // Bytes that are not a valid Kryo stream for any registered type.
+        byte[] garbage = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
 
-    @Test
-    void decodeRejectsUnknownMessageType() {
-        assertThrows(IllegalArgumentException.class,
-                () -> WireCodec.decode(frameOf("""
-                        {"type":"BOGUS","messageId":7,"flowId":null,"payload":"?"}
-                        """)));
+        assertThrows(IllegalArgumentException.class, () -> WireCodec.decode(frameOf(garbage)));
     }
 
     @Test
@@ -94,11 +75,10 @@ class WireCodecTest {
     }
 
     /**
-     * Purpose: build a well-formed frame whose body is {@code json}, so the
-     * tests control the raw body bytes exactly.
+     * Purpose: wrap {@code body} in a well-formed length frame, so the tests
+     * control the raw body bytes exactly.
      */
-    private static byte[] frameOf(String json) {
-        byte[] body = json.getBytes(StandardCharsets.UTF_8);
+    private static byte[] frameOf(byte[] body) {
         byte[] frame = new byte[4 + body.length];
         frame[0] = (byte) (body.length >>> 24);
         frame[1] = (byte) (body.length >>> 16);

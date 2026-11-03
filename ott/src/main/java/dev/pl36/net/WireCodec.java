@@ -1,10 +1,11 @@
 package dev.pl36.net;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.EnumNameSerializer;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -17,33 +18,57 @@ import java.util.Objects;
  * and cannot silently disagree about the format.</p>
  *
  * <p>Wire format: a 4-byte big-endian length prefix, followed by exactly that
- * many bytes of UTF-8 JSON describing the {@link ControlMessage} components.
- * {@link MessageType} values serialise as their enum names, so adding values
- * to the enum is not a wire change.</p>
+ * many bytes of a Kryo binary body describing the {@link ControlMessage}
+ * components. {@link MessageType} values serialise by name through
+ * {@link EnumNameSerializer}, so reordering the enum or adding values is not a
+ * wire change.</p>
  *
  * <p>Invariants: for every message {@code m},
- * {@code decode(encode(m))} equals {@code m}; the JSON body never exceeds
+ * {@code decode(encode(m))} equals {@code m}; the Kryo body never exceeds
  * {@value #MAX_FRAME_BODY_BYTES} bytes, and decoding rejects frames that
- * declare more. Decoding ignores unknown JSON fields, so the envelope can be
- * extended with new fields without breaking old code. This class is stateless
- * and thread-safe.</p>
+ * declare more. The codec is thread-safe: Kryo instances are not, so each
+ * thread keeps its own in a {@link ThreadLocal}. References are disabled
+ * because a message is a flat record with no shared or cyclic objects.</p>
  *
  * <p>Failure modes: every malformed input — a truncated frame, a negative or
- * oversized length prefix, invalid JSON, or an unknown message type — is
- * reported as {@link IllegalArgumentException}; the codec never blocks or
- * hangs. Encoding a message whose body exceeds the maximum throws
+ * oversized length prefix, or a body Kryo cannot deserialise — is reported as
+ * {@link IllegalArgumentException}; the codec never blocks or hangs. Encoding a
+ * message whose body exceeds the maximum throws
  * {@link IllegalArgumentException} as well.</p>
+ *
+ * <p>Compatibility: unlike a self-describing format, the Kryo body is tied to
+ * the shape of {@link ControlMessage}. Adding, removing or reordering fields is
+ * a wire change, so every node must run the same build. That is intentional for
+ * the course overlay, where all nodes are launched from one JAR.</p>
  */
 public final class WireCodec {
 
-    /** The largest JSON body, in bytes, a frame may carry. */
+    /** The largest body, in bytes, a frame may carry. */
     public static final int MAX_FRAME_BODY_BYTES = 64 * 1024;
 
-    /** Shared, thread-safe mapper configured for forward compatibility. */
-    private static final ObjectMapper JSON = new ObjectMapper()
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    /** Per-thread serialiser; Kryo instances are not thread-safe. */
+    private static final ThreadLocal<Kryo> KRYOS = ThreadLocal.withInitial(WireCodec::newKryo);
 
     private WireCodec() {
+    }
+
+    /**
+     * Purpose: build a Kryo configured for the control wire format.
+     *
+     * <p>The message class is registered because registration is required, and
+     * enums are pinned to their names so the {@link MessageType} extension
+     * point documented there keeps working. References are disabled so a reused
+     * per-thread Kryo never leaks object identity between messages.</p>
+     *
+     * @return a fresh, thread-confined Kryo
+     */
+    private static Kryo newKryo() {
+        Kryo kryo = new Kryo();
+        kryo.setRegistrationRequired(true);
+        kryo.setReferences(false);
+        kryo.register(ControlMessage.class);
+        kryo.register(MessageType.class, new EnumNameSerializer(MessageType.class));
+        return kryo;
     }
 
     /**
@@ -51,24 +76,26 @@ public final class WireCodec {
      * chunk of bytes, ready to be written to the TCP control channel.
      *
      * @param message the message to serialise
-     * @return the framed bytes: 4-byte big-endian body length, then the UTF-8
-     *         JSON body
+     * @return the framed bytes: 4-byte big-endian body length, then the Kryo
+     *         binary body
      * @throws NullPointerException     if {@code message} is null
-     * @throws IllegalArgumentException if the JSON body exceeds
-     *                                  {@value #MAX_FRAME_BODY_BYTES} bytes
+     * @throws IllegalArgumentException if the Kryo body exceeds
+     *                                  {@value #MAX_FRAME_BODY_BYTES} bytes or
+     *                                  cannot be serialised
      */
     public static byte[] encode(ControlMessage message) {
         Objects.requireNonNull(message, "message");
 
         byte[] body;
-        try {
-            body = JSON.writeValueAsBytes(message);
-        } catch (JsonProcessingException cause) {
+        try (Output output = new Output(128)) {
+            KRYOS.get().writeObject(output, message);
+            body = output.toBytes();
+        } catch (KryoException cause) {
             throw new IllegalArgumentException("message is not encodable: " + message, cause);
         }
         if (body.length > MAX_FRAME_BODY_BYTES) {
             throw new IllegalArgumentException(
-                    "json body exceeds frame maximum of " + MAX_FRAME_BODY_BYTES
+                    "kryo body exceeds frame maximum of " + MAX_FRAME_BODY_BYTES
                             + " bytes: " + body.length);
         }
 
@@ -87,8 +114,8 @@ public final class WireCodec {
      * @throws NullPointerException     if {@code frame} is null
      * @throws IllegalArgumentException if the frame is truncated, declares a
      *                                  negative or oversized body length, or
-     *                                  does not contain valid JSON of a known
-     *                                  message type
+     *                                  does not contain a valid Kryo body of a
+     *                                  {@link ControlMessage}
      */
     public static ControlMessage decode(byte[] frame) {
         Objects.requireNonNull(frame, "frame");
@@ -114,10 +141,15 @@ public final class WireCodec {
                             + bodyLength);
         }
 
-        try {
-            return JSON.readValue(frame, 4, bodyLength, ControlMessage.class);
-        } catch (IOException cause) {
+        ControlMessage decoded;
+        try (Input input = new Input(frame, 4, bodyLength)) {
+            decoded = KRYOS.get().readObject(input, ControlMessage.class);
+        } catch (KryoException cause) {
             throw new IllegalArgumentException("malformed frame body", cause);
         }
+        if (decoded == null) {
+            throw new IllegalArgumentException("frame body decoded to null");
+        }
+        return decoded;
     }
 }

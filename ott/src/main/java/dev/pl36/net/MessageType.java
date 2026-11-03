@@ -7,11 +7,11 @@ package dev.pl36.net;
  * that receivers can react without inspecting the opaque payload.</p>
  *
  * <p>Invariants: the enum <em>names</em> are the wire format — {@link WireCodec}
- * serialises them as plain strings. This is the documented extension point for
- * the routing workstream: new routing message kinds are added here as new
- * values, which is not a wire change, because every value serialises to its
- * own name and the codec only rejects names the receiving enum does not
- * know.</p>
+ * serialises them by name (through Kryo's name-based enum serializer), not by
+ * ordinal. This is the documented extension point for the routing workstream:
+ * new routing message kinds are added here as new values, which is not a wire
+ * change, because every value serialises to its own name and the codec only
+ * rejects names the receiving enum does not know.</p>
  *
  * <p>Failure modes: an unknown name encountered during decoding surfaces as
  * {@link IllegalArgumentException} from {@link WireCodec#decode(byte[])}, which

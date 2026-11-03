@@ -13,6 +13,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.21.5</jackson.version>
+        <kryo.version>5.7.1</kryo.version>
         <junit.version>5.13.4</junit.version>
     </properties>
 
@@ -23,12 +24,11 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>${jackson.version}</version>
         </dependency>
-        <!-- JSON framing of control messages. Also transitive via the YAML
-             backend, but declared here because WireCodec uses it directly. -->
+        <!-- Binary framing of control messages on the TCP control channel. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>${kryo.version}</version>
         </dependency>
         <!-- Unit tests. -->
         <dependency>
