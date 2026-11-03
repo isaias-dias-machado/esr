@@ -1,4 +1,6 @@
-package dev.pl36.net;
+package dev.pl36.net.api;
+
+import dev.pl36.net.DataPacketHeader;
 
 /**
  * Callbacks for inbound stream datagrams.

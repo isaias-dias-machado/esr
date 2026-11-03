@@ -1,11 +1,13 @@
-package dev.pl36.net;
+package dev.pl36.net.api;
+
+import dev.pl36.net.DataPacketHeader;
 
 /**
  * The seam between the streaming logic and the UDP transport of the stream
  * data.
  *
  * <p>Purpose: implemented by the transport workstream as a real UDP channel,
- * and faked in-JVM by {@link LoopbackMessenger}; consumed by the streaming
+ * and faked in-JVM by {@code LoopbackMessenger}; consumed by the streaming
  * workstream to push video packets. The payload layout is pinned by
  * {@link DataPacketHeader}. A channel deals only with the <em>direct
  * neighbours</em> of the local node — forwarding is the routing layer's

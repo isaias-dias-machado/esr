@@ -5,7 +5,7 @@ Rubric mapping: overlay topology (10%), half of control protocol (15%),
 and the foundation everything else runs on.
 
 Goal
-Make the interfaces in dev.pl36.net real: TCP control connections between
+Make the interfaces in dev.pl36.net.api real: TCP control connections between
 static YAML neighbours, UDP data channel, and reliable detection of
 neighbour death. Every other workstream consumes only
 ControlMessenger/DataChannel, so nothing above this layer ever touches

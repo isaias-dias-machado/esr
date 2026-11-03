@@ -1,11 +1,13 @@
-package dev.pl36.net;
+package dev.pl36.net.api;
+
+import dev.pl36.net.ControlMessage;
 
 /**
  * The seam between the routing logic and the TCP transport of the control
  * channel.
  *
  * <p>Purpose: implemented by the transport workstream as a real TCP
- * messenger, and faked in-JVM by {@link LoopbackMessenger}; consumed by the
+ * messenger, and faked in-JVM by {@code LoopbackMessenger}; consumed by the
  * routing workstream for neighbour maintenance and controlled flooding. A
  * messenger deals only with the <em>direct neighbours</em> of the local node
  * — multi-hop routing decisions are the caller's business.</p>

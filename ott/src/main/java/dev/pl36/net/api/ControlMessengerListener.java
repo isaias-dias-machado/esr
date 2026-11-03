@@ -1,4 +1,6 @@
-package dev.pl36.net;
+package dev.pl36.net.api;
+
+import dev.pl36.net.ControlMessage;
 
 /**
  * Callbacks for inbound control traffic and connectivity changes.
