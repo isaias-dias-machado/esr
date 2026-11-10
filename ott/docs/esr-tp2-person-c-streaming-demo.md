@@ -5,6 +5,46 @@ Rubric mapping: streaming protocol (10%), plus ownership of the integrated
 solution (30%) — including report quality and defence — which is where
 groups most often bleed points. You are NOT the underloaded one.
 
+Status (checked against commit 3adc797, 2026-11-10; mvn test: 25 pass, BUILD SUCCESS)
+Only fully delivered items are marked Done; everything else is Not done.
+
+M1 — streaming over UDP, in isolation
+- Done — ProgEx Mjpeg pair adapted into dev.pl36.streaming (MjpegVideoStream,
+  StreamSource, StreamSink, FrameHandler/ConsoleFrameHandler,
+  StreamingLoopbackDemo); resorces/movie.Mjpeg added.
+- Done — server side: frames numbered via DataPacketHeader (flowId + sequence)
+  and sent over a DataChannel at constant frame rate (`ott server`,
+  timer-driven; default 10 fps, the plan's 24 fps is overridable with --fps).
+- Done — client side: receives, reassembles, tolerates loss and logs gaps by
+  sequence (`ott client` + StreamSink); proven in-JVM over the loopback demo
+  (all 500 frames) and cross-process over real UDP on localhost
+  (net/UdpDataChannel).
+- Not done — play in a window: playback is console-only (ConsoleFrameHandler),
+  no GUI player yet.
+- Not done — two servers x two distinct streams: --video/--flow flags exist but
+  only one movie file is in resorces/.
+
+M2 — scenarios & testbed
+- Not done — n17 typo fix: resorces/cenario1.yaml:13 and resorces/cenario2.yaml:19
+  still declare n17 as 10.1.11.12/24 (should be 10.1.11.17/24 per
+  context/scenarios.md).
+- Not done — localhost variant of cenario1.yaml.
+- Not done — resorces/cenario3.yaml (11 overlay nodes, 5 clients).
+- Not done — java -version inside a running CORE node (openjdk-21-jdk-headless
+  is in packages.txt but unverified in a node).
+
+M3 — first end-to-end over the real overlay
+- Not done — UdpDataChannel is a placeholder with a fixed peer set; no overlay
+  forwarding yet (depends on A/B).
+
+M4 — test matrix & demo runbook
+- Not done — no runbook or evidence runs yet for the 8-case matrix in
+  context/scenarios.md.
+
+M5 — report
+- Not done — no TP2 LNCS skeleton/draft yet (the root report/ directory holds
+  TP1 material only).
+
 Goal
 Own everything the graders actually see: the streams, the scenarios, the
 demo runbook, and the LNCS report. Work continuously from week 1 — the
