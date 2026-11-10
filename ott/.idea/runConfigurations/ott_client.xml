@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Client mode of dev.pl36.Main (program arguments: client, listen 25000).
+     Listens on UDP port 25000 for flow 'server1/movie.Mjpeg' and logs every frame
+     and gap until stopped manually (it blocks on a latch). -->
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ott client" type="Application" factoryName="Application">
+    <module name="ott" />
+    <option name="MAIN_CLASS_NAME" value="dev.pl36.Main" />
+    <option name="PROGRAM_PARAMETERS" value="client --listen 25000" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

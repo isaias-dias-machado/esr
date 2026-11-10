@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Server mode of dev.pl36.Main (program arguments: server, dest 127.0.0.1:25000).
+     Streams resorces/movie.Mjpeg as flow 'server1/movie.Mjpeg' at 10 fps over UDP
+     to the client at 127.0.0.1:25000 (the other flags keep their hardcoded defaults).
+     Start the client configuration first; the server fires UDP immediately. -->
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ott server" type="Application" factoryName="Application">
+    <module name="ott" />
+    <option name="MAIN_CLASS_NAME" value="dev.pl36.Main" />
+    <option name="PROGRAM_PARAMETERS" value="server --dest 127.0.0.1:25000" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

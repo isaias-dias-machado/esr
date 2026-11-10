@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Overlay-node mode of dev.pl36.Main: `ott <node_id> <scenario.yaml>`.
+     Runs node 0 of resorces/cenario1.yaml and prints its local routing table.
+     Working directory is the ott/ project root so the relative scenario path resolves. -->
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ott node 0 (cenario1)" type="Application" factoryName="Application">
+    <module name="ott" />
+    <option name="MAIN_CLASS_NAME" value="dev.pl36.Main" />
+    <option name="PROGRAM_PARAMETERS" value="0 resorces/cenario1.yaml" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
