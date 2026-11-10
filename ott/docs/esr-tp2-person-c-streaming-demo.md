@@ -22,8 +22,8 @@ M1 — streaming over UDP, in isolation
 - Not done — play in a window: playback is console-only (ConsoleFrameHandler),
   no GUI player yet.
 - Not done — two servers x two distinct streams: --video/--flow flags exist but
-  only one movie file is in resorces/ (design agreed in the multi-stream
-  section below).
+  only one movie file is in resorces/ (implementation plan:
+  /tmp/vibe/esr-tp2-person-c-multistream-impl.md).
 
 M2 — scenarios & testbed
 - Not done — n17 typo fix: resorces/cenario1.yaml:13 and resorces/cenario2.yaml:19
@@ -63,35 +63,8 @@ M1 (weeks 1-2): streaming over UDP, in isolation
 - Test entirely over loopback sockets first; no overlay needed yet.
 - Two servers x two distinct streams (minimum requirement 9): each server
   process loads different movies; the flow id is the video file name, e.g.
-  "movie2.Mjpeg" — the client asks for a video, never for a server (see
-  "Multi-stream & multi-client design" below).
-
-Multi-stream & multi-client design (agreed 2026-11-10)
-- Flow id identifies the content, not the server: flow id = the video file
-  name (e.g. "movie2.Mjpeg"). The client runs `ott client --want
-  movie2.Mjpeg` and never names a server — the assignment's Figure 1 has
-  one server and the clients just consume the stream; requirement 9 adds
-  servers, but the routing entry's Origin (the connection the flow arrives
-  from) is filled in by the overlay, not by the client. `--flow` stays only
-  as a low-level override for tests.
-- Shared streams are a core use case, not an edge case: one flow has many
-  destinations (the routing entry's Destinations is plural; test-matrix
-  cases 2, 3 and 4 in context/scenarios.md). StreamSource already replicates
-  each frame to a destination collection; Main currently hardcodes one.
-- Server CLI: repeatable flags — `ott server [--dest host:port]...
-  [--video file]... [--fps n]`; each video's flow id defaults to its file
-  name; one StreamSource per video, all sharing one UdpDataChannel whose
-  peer map is the --dest list (synthetic node ids 1..N). Old single-stream
-  invocations keep working unchanged (defaults are the ProgEx values).
-- Client CLI: `--want <videoName>` (alias `--flow`), repeatable; one
-  StreamSink per flow, demultiplexed on the single listen port (StreamSink
-  already filters datagrams by flow id).
-- The 2x2 demo needs 4 distinct video file names in resorces/ (copies of
-  movie.Mjpeg under different names count as distinct streams for the
-  prototype — note this honestly in the report).
-- Out of scope for now: clients joining/leaving a server's peer set
-  dynamically — the UdpDataChannel peer set stays fixed; dynamic membership
-  is the overlay's job via the routing entry once A/B land.
+  "movie2.Mjpeg" — the client asks for a video, never for a server
+  (implementation plan: /tmp/vibe/esr-tp2-person-c-multistream-impl.md).
 
 M2 (weeks 1-3, parallel): scenarios & testbed — start immediately
 - Fix the known n17 address typo in cenario1.yaml and cenario2.yaml
