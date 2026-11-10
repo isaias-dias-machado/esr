@@ -20,7 +20,8 @@ import java.util.List;
  */
 public final class StreamingLoopbackDemo {
 
-    private static final String FLOW_ID = "server1/movie.Mjpeg";
+    /** The flow id is the bare video file name (content-addressed). */
+    private static final String FLOW_ID = "movie.Mjpeg";
 
     private StreamingLoopbackDemo() {
     }

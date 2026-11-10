@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * The sending end of one stream, extracted from the book code's
@@ -22,16 +23,20 @@ import java.util.concurrent.TimeUnit;
  * file.</p>
  *
  * <p>Invariants: sequence numbers start at 1 and increase by one per frame;
- * every destination receives the same datagram bytes; {@link #start()} is
- * timer-driven while {@link #pumpAll()} is synchronous (tests and demos) —
- * at most one of them runs at a time per instance.</p>
+ * every current destination receives the same datagram bytes;
+ * {@link #start()} is timer-driven while {@link #pumpAll()} is synchronous
+ * (tests and demos) — at most one of them runs at a time per instance. The
+ * destination list may be <em>live</em> (the supplier constructor): it is
+ * read again for every frame, so a destination added while the source runs
+ * is served from the next frame on, without restarting the sequence numbers
+ * the existing destinations already see.</p>
  *
  * <p>Failure modes: an {@link IOException} from the video file stops the
  * source and propagates out of {@link #sendNextFrame()}; a destination whose
  * link is down (the channel's {@link IllegalStateException}) is logged and
  * skipped for that frame — best effort like UDP, the other destinations are
  * unaffected. Construction rejects a null argument, an empty destination
- * list, or a non-positive frame period.</p>
+ * list (fixed-list constructor), or a non-positive frame period.</p>
  */
 public final class StreamSource {
 
@@ -41,7 +46,7 @@ public final class StreamSource {
     private final String flowId;
     private final MjpegVideoStream video;
     private final DataChannel channel;
-    private final List<Integer> destinationNodeIds;
+    private final Supplier<? extends Collection<Integer>> destinationSupplier;
     private final long framePeriodMillis;
     private final CountDownLatch doneLatch = new CountDownLatch(1);
 
@@ -50,7 +55,8 @@ public final class StreamSource {
     private ScheduledExecutorService scheduler;
 
     /**
-     * Purpose: create a source that streams {@code video} as {@code flowId}.
+     * Purpose: create a source that streams {@code video} as {@code flowId}
+     * to a fixed set of destinations.
      *
      * @param flowId             the flow id stamped on every packet
      * @param video              the open video reader to pull frames from
@@ -66,17 +72,50 @@ public final class StreamSource {
                         DataChannel channel,
                         Collection<Integer> destinationNodeIds,
                         long framePeriodMillis) {
+        this(flowId, video, channel, fixedDestinations(destinationNodeIds), framePeriodMillis);
+    }
+
+    /**
+     * Purpose: create a source whose destinations are read live from
+     * {@code destinationSupplier} on every frame — the placeholder
+     * dispatcher uses this so a WANT_FLOW that arrives mid-stream adds the
+     * requester to the running source instead of restarting it.
+     *
+     * @param flowId              the flow id stamped on every packet
+     * @param video               the open video reader to pull frames from
+     * @param channel             the data channel to send datagrams on
+     * @param destinationSupplier the live destination view; must yield at
+     *                            least one destination while the source runs
+     * @param framePeriodMillis   the constant interval between frames, in ms
+     * @throws NullPointerException     for a null argument
+     * @throws IllegalArgumentException for a non-positive frame period
+     */
+    public StreamSource(String flowId,
+                        MjpegVideoStream video,
+                        DataChannel channel,
+                        Supplier<? extends Collection<Integer>> destinationSupplier,
+                        long framePeriodMillis) {
         this.flowId = Objects.requireNonNull(flowId, "flowId");
         this.video = Objects.requireNonNull(video, "video");
         this.channel = Objects.requireNonNull(channel, "channel");
-        this.destinationNodeIds = List.copyOf(destinationNodeIds);
-        if (destinationNodeIds.isEmpty()) {
-            throw new IllegalArgumentException("at least one destination is required");
-        }
+        this.destinationSupplier = Objects.requireNonNull(destinationSupplier, "destinationSupplier");
         if (framePeriodMillis <= 0) {
             throw new IllegalArgumentException("frame period must be positive: " + framePeriodMillis);
         }
         this.framePeriodMillis = framePeriodMillis;
+    }
+
+    /**
+     * Purpose: validate a fixed destination collection and wrap it in a
+     * constant supplier.
+     */
+    private static Supplier<List<Integer>> fixedDestinations(Collection<Integer> destinationNodeIds) {
+        Objects.requireNonNull(destinationNodeIds, "destinationNodeIds");
+        if (destinationNodeIds.isEmpty()) {
+            throw new IllegalArgumentException("at least one destination is required");
+        }
+        List<Integer> copy = List.copyOf(destinationNodeIds);
+        return () -> copy;
     }
 
     /**
@@ -124,7 +163,7 @@ public final class StreamSource {
 
         DataPacketHeader header = new DataPacketHeader(flowId, nextSequenceNumber++, payload);
         byte[] datagram = DataPacketHeader.encode(header);
-        for (int destinationNodeId : destinationNodeIds) {
+        for (int destinationNodeId : destinationSupplier.get()) {
             try {
                 channel.sendDatagram(destinationNodeId, datagram);
             } catch (IllegalStateException linkDown) {

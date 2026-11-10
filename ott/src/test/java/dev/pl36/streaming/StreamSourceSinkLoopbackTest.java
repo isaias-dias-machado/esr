@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class StreamSourceSinkLoopbackTest {
 
-    private static final String FLOW_ID = "server1/movie.Mjpeg";
+    private static final String FLOW_ID = "movie.Mjpeg";
 
     @TempDir
     Path tempDir;

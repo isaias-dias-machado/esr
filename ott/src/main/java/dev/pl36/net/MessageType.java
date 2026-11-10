@@ -26,5 +26,30 @@ public enum MessageType {
     GOODBYE,
 
     /** Refreshes an existing neighbour connection so it is not considered dead. */
-    KEEPALIVE
+    KEEPALIVE,
+
+    /**
+     * Client-initiated request for a flow (Stage 2, Strategy 2). The
+     * {@code flowId} names the content, not a server; {@code messageId}
+     * dedups the request when it is flooded; the {@code payload} carries the
+     * requester's data endpoint in the localhost placeholder (its UDP listen
+     * port — the host comes from the control connection itself).
+     */
+    WANT_FLOW,
+
+    /**
+     * Withdraws a previous {@link #WANT_FLOW} for {@code flowId}: the
+     * requester is removed from the flow's destinations. Reserved for
+     * graceful mid-stream leaves; connection-death detection is the
+     * transport workstream's job.
+     */
+    LEAVE_FLOW,
+
+    /**
+     * Server-side announcement that the sending node owns {@code flowId}
+     * (Stage 2, Strategy 1). Strategy-neutral on purpose: which of the two
+     * strategies carries these messages is the routing workstream's choice,
+     * not the streaming code's.
+     */
+    ANNOUNCE
 }

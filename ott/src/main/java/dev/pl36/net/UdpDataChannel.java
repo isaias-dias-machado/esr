@@ -9,9 +9,9 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The minimal real implementation of {@link DataChannel} over UDP: one
@@ -27,10 +27,12 @@ import java.util.Objects;
  * the channel is a dumb pipe and does not inspect datagrams.</p>
  *
  * <p>Invariants: a {@code listenPort} of 0 binds an ephemeral port (server
- * side); the peer map is immutable after construction; {@link #start()}
- * precedes every send and every listener event; {@link #close()} is idempotent
- * and stops the receiver thread; the receiver thread is a daemon, so it never
- * keeps the JVM alive on its own.</p>
+ * side); peers can be added at any time before {@link #close()} with
+ * {@link #addPeer(int, InetSocketAddress)}, which is how the placeholder
+ * server registers each requester on the one shared channel;
+ * {@link #start()} precedes every send and every listener event;
+ * {@link #close()} is idempotent and stops the receiver thread; the receiver
+ * thread is a daemon, so it never keeps the JVM alive on its own.</p>
  *
  * <p>Failure modes: the constructor throws {@link SocketException} if the port
  * cannot be bound; {@link #sendDatagram} throws {@link IllegalArgumentException}
@@ -48,8 +50,8 @@ public final class UdpDataChannel implements DataChannel {
     public static final int UNKNOWN_NODE_ID = -1;
 
     private final DatagramSocket socket;
-    private final Map<Integer, InetSocketAddress> peersByNodeId;
-    private final Map<String, Integer> nodeIdBySourceKey = new HashMap<>();
+    private final Map<Integer, InetSocketAddress> peersByNodeId = new ConcurrentHashMap<>();
+    private final Map<String, Integer> nodeIdBySourceKey = new ConcurrentHashMap<>();
     private volatile DataChannelListener listener;
     private volatile boolean started;
     private volatile boolean closed;
@@ -64,10 +66,26 @@ public final class UdpDataChannel implements DataChannel {
      */
     public UdpDataChannel(int listenPort, Map<Integer, InetSocketAddress> peers) throws SocketException {
         this.socket = new DatagramSocket(listenPort);
-        this.peersByNodeId = Map.copyOf(peers);
-        for (Map.Entry<Integer, InetSocketAddress> entry : peers.entrySet()) {
-            nodeIdBySourceKey.put(sourceKey(entry.getValue()), entry.getKey());
+        peers.forEach(this::addPeer);
+    }
+
+    /**
+     * Purpose: register an additional peer at runtime — the placeholder
+     * server calls this when a WANT_FLOW arrives, mapping the requester's
+     * synthetic node id to its UDP data address. Re-registering the same id
+     * replaces the old address.
+     *
+     * @param nodeId  the destination node id to send datagrams to
+     * @param address the peer's UDP socket address
+     * @throws IllegalStateException if the channel is closed
+     */
+    public void addPeer(int nodeId, InetSocketAddress address) {
+        Objects.requireNonNull(address, "address");
+        if (closed) {
+            throw new IllegalStateException("channel closed");
         }
+        peersByNodeId.put(nodeId, address);
+        nodeIdBySourceKey.put(sourceKey(address), nodeId);
     }
 
     /**

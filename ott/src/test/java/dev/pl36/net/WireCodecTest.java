@@ -20,6 +20,9 @@ class WireCodecTest {
                 new ControlMessage(MessageType.HELLO, 42L, null, "join"),
                 new ControlMessage(MessageType.GOODBYE, Long.MAX_VALUE, "server1/movie.mjpg", ""),
                 new ControlMessage(MessageType.KEEPALIVE, Long.MIN_VALUE, null, ""),
+                new ControlMessage(MessageType.WANT_FLOW, 11L, "movie2.Mjpeg", "25000"),
+                new ControlMessage(MessageType.LEAVE_FLOW, 12L, "movie2.Mjpeg", ""),
+                new ControlMessage(MessageType.ANNOUNCE, 13L, "movie3.Mjpeg", ""),
                 new ControlMessage(MessageType.KEEPALIVE, 7L, "сервер1/filme.mjpg",
                         " Vídeo — 日本語 ✓"));
 

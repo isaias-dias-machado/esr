@@ -21,9 +21,14 @@ M1 — streaming over UDP, in isolation
   (net/UdpDataChannel).
 - Not done — play in a window: playback is console-only (ConsoleFrameHandler),
   no GUI player yet.
-- Not done — two servers x two distinct streams: --video/--flow flags exist but
-  only one movie file is in resorces/ (implementation plan:
-  /tmp/vibe/esr-tp2-person-c-multistream-impl.md).
+- Done — two servers x two distinct streams (agent/c-multistream-impl):
+  multi-value --video/--want/--flow, request/pull model (WANT_FLOW /
+  LEAVE_FLOW / ANNOUNCE, strategy-neutral), placeholder FlowDispatcher keeping
+  one { Flow, Cost, Origin=LOCAL, Destinations, State } entry per flow with
+  plural Destinations, one shared UdpDataChannel per server, flow id = bare
+  video file name; resorces/movie2-4.Mjpeg added for the 2x2 demo (copies of
+  movie.Mjpeg — distinct flow ids, same content; noted honestly in the
+  report). Plan: /tmp/vibe/esr-tp2-person-c-multistream-impl.md.
 
 M2 — scenarios & testbed
 - Not done — n17 typo fix: resorces/cenario1.yaml:13 and resorces/cenario2.yaml:19
