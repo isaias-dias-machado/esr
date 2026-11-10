@@ -3,6 +3,16 @@
 Source of truth for agents working in `ott/`. Read `context/assignment.md`
 before any mission-relevant change.
 
+## Git Workflow
+When making changes/edits, ALWAYS follow this process:
+0. Ensure that we are under a git directory. If not, do not continue.
+1. Ensure the current branch is committed. If not, do not continue
+   until the user has committed and pushed the changes.
+2. Create a new git workspace before named: agent/<short-task-name>
+3. Never commit directly to main or master.
+4. Never leave the working tree dirty between tasks.
+
+
 ## Project
 
 - Course: Engenharia de Serviços em Rede (ESR), MEI, Universidade do Minho, 2026/27.
