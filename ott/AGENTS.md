@@ -36,12 +36,14 @@ The report and the live demo must show:
 
 | Path | Role |
 |------|------|
-| `src/main/java/dev/pl36/Main.java` | Entry point `ott <node_id> <scenario.yaml>`; builds and prints the local routing table. TCP client/server sketches are commented out. |
+| `src/main/java/dev/pl36/Main.java` | Single deployable program. `ott <node_id> <scenario.yaml>` builds and prints the local routing table; `ott server [--dest host:port] [--video file] [--flow id] [--fps n]` streams one video to one client; `ott client [--listen port] [--server host:port] [--flow id]` receives and logs one flow. Streaming defaults (127.0.0.1:25000, `resorces/movie.Mjpeg`, 10 fps) are hardcoded and overridable by flags. |
 | `src/main/java/dev/pl36/scenario/` | `Scenario`, `ScenarioParser`, `Node`, `Neighbor`, `InvalidScenarioException`, `ParseScenarioDemo`. Strict YAML parsing and validation. |
 | `src/main/java/dev/pl36/routing/RoutingTable.java` | Per-process view: the local node plus its direct neighbours. Not yet a per-flow table. |
-| `src/main/java/dev/pl36/net/` | Shared seams of the overlay: `ControlMessage`/`WireCodec` (TCP control wire format), `DataPacketHeader` (UDP packet layout), `LoopbackMessenger` in-JVM fake. No real sockets yet. |
+| `src/main/java/dev/pl36/net/` | Shared seams of the overlay: `ControlMessage`/`WireCodec` (TCP control wire format), `DataPacketHeader` (UDP packet layout), `LoopbackMessenger` in-JVM fake, `UdpDataChannel` minimal real UDP `DataChannel` (fixed peer set; placeholder for the full transport). |
 | `src/main/java/dev/pl36/net/api/` | Transport contracts consumed by the routing and streaming layers: `ControlMessenger`/`DataChannel` and their listener interfaces. Implementations live in `net/`. |
+| `src/main/java/dev/pl36/streaming/` | ProgEx extraction (see `docs/ProgEx/`): `MjpegVideoStream` (movie.Mjpeg frame reader), `StreamSource`/`StreamSink` (numbered frames over `DataChannel` via `DataPacketHeader`, gap-tolerant), `FrameHandler`/`ConsoleFrameHandler`, `StreamingLoopbackDemo` in-JVM demo. |
 | `resorces/cenario1.yaml`, `resorces/cenario2.yaml` | Test scenarios (see `context/scenarios.md`). |
+| `resorces/movie.Mjpeg` | Test video copied from `docs/ProgEx/` (500 MJPEG frames). |
 | `pom.xml` | Java 21, Jackson YAML, no wrapper and no shade/exec plugin. |
 
 `resorces/` is misspelled on purpose (historical). Do not rename it silently:
@@ -63,6 +65,15 @@ with an explicit classpath:
 mvn dependency:build-classpath -Dmdep.outputFile=/tmp/ott-cp.txt
 java -cp "target/classes:$(cat /tmp/ott-cp.txt)" dev.pl36.Main \
      <node_id> resorces/cenario1.yaml
+```
+
+Streaming demo (one client, one server, localhost; start the client first —
+the server fires UDP immediately):
+
+```sh
+java -cp "target/classes:$(cat /tmp/ott-cp.txt)" dev.pl36.streaming.StreamingLoopbackDemo   # in-JVM, no sockets
+java -cp "target/classes:$(cat /tmp/ott-cp.txt)" dev.pl36.Main client --listen 25000          # terminal 1
+java -cp "target/classes:$(cat /tmp/ott-cp.txt)" dev.pl36.Main server --dest 127.0.0.1:25000 # terminal 2
 ```
 
 ## CORE workflow
