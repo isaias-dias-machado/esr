@@ -1,10 +1,29 @@
 #!/usr/bin/env bash
 #
-# localhost-demo.sh — run one OTT scenario (1, 2 or 3) on a single laptop,
+# localhost-demo.sh — run one OTT scenario (1, 2 or 3) on a single host,
 # without CORE, so the M4 test matrix of context/scenarios.md is repeatable
 # by any group member.
 #
-# Where the numbers come from:
+# Usage: scripts/localhost-demo.sh <command> [args]
+#
+# Commands:
+#   up <1|2|3> [id ...]    start all nodes except the listed ids
+#   start <1|2|3> <id>     start one node (mid-stream join)
+#   down <1|2|3>           stop the scenario (idempotent, logs are kept)
+#   kill <1|2|3> <id>      abruptly kill one node (failure cases)
+#   status <1|2|3>         show per-node role and process state
+#   logs <1|2|3> [id]      tail one node's log, or all of them
+#   -h, --help             show this help and exit
+#
+# Environment:
+#   RUN_ROOT              run directory (default: /tmp/ott-localhost)
+#   CLASSPATH_FILE        dependency classpath cache (default: /tmp/ott-cp.txt)
+#
+# Notes:
+#   run one scenario at a time (scenarios share the same port ranges)
+#   full localhost runbook: context/scenarios.md
+#
+# Internal design notes (not printed by --help):
 #   - node roles come from the scenario YAML itself, via `ott roles`
 #     (`id role ip_addr` lines) — there is no role table in this script;
 #   - scenario N runs `resorces/cenarioN-localhost.yaml`: node id x owns
@@ -20,16 +39,6 @@
 # Today relay nodes are parse-checked once (`ott <id> <scenario>`) instead of
 # running an overlay process: overlay forwarding (M3) is not in yet. When
 # node mode runs real processes, `start_node` is the single place to change.
-#
-# Run one scenario at a time: scenarios share the client/server port ranges.
-#
-# Usage (see also the localhost runbook in context/scenarios.md):
-#   scripts/localhost-demo.sh up <1|2|3> [id ...]   start all nodes except the listed ids
-#   scripts/localhost-demo.sh start <1|2|3> <id>   start one node (mid-stream join)
-#   scripts/localhost-demo.sh down <1|2|3>          stop the scenario (idempotent; logs are kept)
-#   scripts/localhost-demo.sh kill <1|2|3> <id>     abruptly kill one node (failure cases)
-#   scripts/localhost-demo.sh status <1|2|3>       per-node role and process state
-#   scripts/localhost-demo.sh logs <1|2|3> [id]    tail one node's log, or all of them
 
 set -euo pipefail
 
@@ -50,8 +59,8 @@ RELAY_IDS=()
 # Paths, classpath and the many `ott` invocations
 # ---------------------------------------------------------------------
 
-usage() {
-    sed -n '2,42p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+usage() {  # usage — print this file's header help block (lines 2-24)
+    sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_scenario() {
