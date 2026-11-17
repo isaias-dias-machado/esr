@@ -7,20 +7,21 @@
 # Usage: scripts/localhost-demo.sh <command> [args]
 #
 # Commands:
-#   up <1|2|3> [node_id ...]    start all nodes except the given node ids
-#   start <1|2|3> <node_id>     start node <node_id> (mid-stream join)
-#   down <1|2|3>                stop the scenario (idempotent, logs are kept)
-#   kill <1|2|3> <node_id>      abruptly kill node <node_id> (failure cases)
-#   status <1|2|3>              show per-node role and process state
-#   logs <1|2|3> [node_id]      tail node <node_id>'s log, or all of them
-#   -h, --help                  show this help and exit
+#   up <scenario> [node_id ...]    start all nodes except the given node ids
+#   start <scenario> <node_id>     start node <node_id> (mid-stream join)
+#   down <scenario>                stop the scenario (idempotent, logs are kept)
+#   kill <scenario> <node_id>      abruptly kill node <node_id> (failure cases)
+#   status <scenario>              show per-node role and process state
+#   logs <scenario> [node_id]      tail node <node_id>'s log, or all of them
+#   -h, --help                     show this help and exit
 #
 # Environment:
 #   RUN_ROOT              run directory (default: /tmp/ott-localhost)
 #   CLASSPATH_FILE        dependency classpath cache (default: /tmp/ott-cp.txt)
 #
 # Notes:
-#   <node_id> is a node id declared in the scenario YAML; see `status <1|2|3>`
+#   <scenario>   one of 1, 2 or 3 — the test scenario to act on
+#   <node_id>    a node id declared in the scenario YAML; see `status <scenario>`
 #   run one scenario at a time (scenarios share the same port ranges)
 #   full localhost runbook: context/scenarios.md
 #
@@ -60,8 +61,8 @@ RELAY_IDS=()
 # Paths, classpath and the many `ott` invocations
 # ---------------------------------------------------------------------
 
-usage() {  # usage — print this file's header help block (lines 2-25)
-    sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+usage() {  # usage — print this file's header help block (lines 2-26)
+    sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_scenario() {
