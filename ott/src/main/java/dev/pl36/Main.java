@@ -3,7 +3,9 @@ package dev.pl36;
 import dev.pl36.net.ControlMessage;
 import dev.pl36.net.MessageType;
 import dev.pl36.net.TcpControlLink;
+import dev.pl36.net.TcpControlMessenger;
 import dev.pl36.net.UdpDataChannel;
+import dev.pl36.net.UdpDataTransport;
 import dev.pl36.net.api.ControlMessengerListener;
 import dev.pl36.net.api.DataChannelListener;
 import dev.pl36.routing.FlowEntry;
@@ -23,14 +25,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The single deployable OTT program. Three modes:
  *
  * <ul>
  *   <li>{@code ott <node_id> <scenario.yaml>} — overlay node: parses the
- *       scenario and prints the local routing table.</li>
+ *       scenario, prints the local routing table, and connects to its
+ *       neighbours over TCP until stopped (Ctrl-C sends GOODBYE).</li>
  *   <li>{@code ott server [--video file]... [--flow id]... [--fps n]
  *       [--control port] [--dest host:port]} — an OTT node that <em>owns</em>
  *       flows (one per {@code --video}, flow id = video file name unless
@@ -90,7 +95,8 @@ public class Main {
 
     private static final String HELP = """
             usage:
-              ott <node_id> <scenario.yaml>            overlay node: parse scenario, print routing table
+              ott <node_id> <scenario.yaml>            overlay node: print routing table, connect to the
+                                                       scenario neighbours over TCP, run until Ctrl-C
               ott server [--video file]... [--flow id]... [--fps n] [--control port] [--dest host:port]
                                                        serve flows (id = video file name), answer WANT_FLOW on
                                                        the control port (default 25001); --dest is a test-only
@@ -115,9 +121,21 @@ public class Main {
 
     /**
      * Purpose: overlay node mode — {@code ott <node_id> <scenario.yaml>}.
-     * Parses the scenario and prints the local routing table.
+     * Parses the scenario, prints the local routing table, then joins the
+     * overlay over TCP ({@link TcpControlMessenger}) and runs until stopped.
+     *
+     * <p>Every neighbour up/down is logged by the transport; the listener
+     * here adds the list of neighbours connected after each change. Ctrl-C
+     * (SIGINT) and {@code kill} (SIGTERM) run a shutdown hook that closes the
+     * messenger, so neighbours receive a GOODBYE; {@code kill -9} (SIGKILL)
+     * runs no code, and neighbours detect the loss by EOF instead.</p>
+     *
+     * <p>The node also opens its UDP data channel ({@link UdpDataTransport})
+     * on the same port. Not wired yet: routing and streaming — the control
+     * listener only logs messages and the data listener only counts
+     * datagrams per neighbour (totals printed on exit).</p>
      */
-    private static void runNode(String[] args) {
+    private static void runNode(String[] args) throws InterruptedException {
         if (args.length != 2) {
             throw new IllegalArgumentException(HELP);
         }
@@ -125,13 +143,75 @@ public class Main {
         int selfId = parseNodeId(args[0]);
         Path scenarioPath = Path.of(args[1]);
 
+        Scenario scenario;
         try {
-            Scenario scenario = ScenarioParser.parse(scenarioPath);
-            RoutingTable routingTable = RoutingTable.from(scenario, selfId);
-            System.out.println(routingTable);
+            scenario = ScenarioParser.parse(scenarioPath);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        RoutingTable routingTable = RoutingTable.from(scenario, selfId);
+        System.out.println(routingTable);
+
+        TcpControlMessenger messenger = new TcpControlMessenger(routingTable, scenario.port());
+        messenger.setListener(new ControlMessengerListener() {
+            @Override
+            public void onNeighborUp(int nodeId) {
+                logNode(selfId, "connected neighbours: " + messenger.connectedNeighbours());
+            }
+
+            @Override
+            public void onNeighborDown(int nodeId) {
+                logNode(selfId, "connected neighbours: " + messenger.connectedNeighbours());
+            }
+
+            @Override
+            public void onMessage(int fromNodeId, ControlMessage message) {
+                logNode(selfId, "control message from " + fromNodeId + ": " + message.type()
+                        + " (no routing wired yet)");
+            }
+        });
+
+        // The data channel shares the scenario port (UDP) and asks the control
+        // channel whether a neighbour's link is up before sending to it.
+        UdpDataTransport dataChannel =
+                new UdpDataTransport(routingTable, scenario.port(), messenger::isConnected);
+        // No routing or streaming in node mode yet: count datagrams per
+        // neighbour, log the first one from each, print the totals on exit.
+        Map<Integer, AtomicLong> datagramsByNeighbour = new ConcurrentHashMap<>();
+        dataChannel.setListener((fromNodeId, packet) -> {
+            long count = datagramsByNeighbour
+                    .computeIfAbsent(fromNodeId, id -> new AtomicLong())
+                    .incrementAndGet();
+            if (count == 1) {
+                logNode(selfId, "first datagram from " + fromNodeId + " (" + packet.length
+                        + " bytes); no routing wired yet, counting only");
+            }
+        });
+
+        // Ctrl-C and kill (SIGINT / SIGTERM) run this before the JVM exits:
+        // UDP first (stop taking data), then TCP, whose close() sends GOODBYE
+        // to every neighbour. kill -9 never runs it.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logNode(selfId, "shutting down: datagrams received per neighbour " + datagramsByNeighbour);
+            dataChannel.close();
+            logNode(selfId, "shutting down: sending GOODBYE to neighbours");
+            messenger.close();
+        }, "ott-shutdown"));
+
+        messenger.start();
+        dataChannel.start();
+
+        // The messenger's threads are virtual (daemon) threads and do not keep
+        // the JVM alive, so the main thread waits here until the process is
+        // stopped; the shutdown hook does the cleanup.
+        new CountDownLatch(1).await();
+    }
+
+    /**
+     * Purpose: one node-mode log line, in the same format as the transport's.
+     */
+    private static void logNode(int selfId, String text) {
+        System.err.println("[node " + selfId + "] " + text);
     }
 
     /**
