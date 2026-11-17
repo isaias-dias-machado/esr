@@ -1,0 +1,59 @@
+port: 5002
+nodes:
+  - id: 1
+    ip_addr: 127.0.0.2/8
+    description: "n16 (localhost)"
+    role: server
+  - id: 2
+    ip_addr: 127.0.0.3/8
+    description: "n10 (localhost)"
+    role: relay
+  - id: 3
+    ip_addr: 127.0.0.4/8
+    description: "n8 (localhost)"
+    role: relay
+  - id: 4
+    ip_addr: 127.0.0.5/8
+    description: "n22 (localhost)"
+    role: client
+  - id: 5
+    ip_addr: 127.0.0.6/8
+    description: "n3 (localhost)"
+    role: relay
+  - id: 6
+    ip_addr: 127.0.0.7/8
+    description: "n2 (localhost)"
+    role: server
+  - id: 7
+    ip_addr: 127.0.0.8/8
+    description: "n5 (localhost)"
+    role: relay
+  - id: 8
+    ip_addr: 127.0.0.9/8
+    description: "n24 (localhost)"
+    role: client
+  - id: 9
+    ip_addr: 127.0.0.10/8
+    description: "n18 (localhost)"
+    role: client
+  - id: 10
+    ip_addr: 127.0.0.11/8
+    description: "n19 (localhost)"
+    role: client
+  - id: 11
+    ip_addr: 127.0.0.12/8
+    description: "n20 (localhost)"
+    role: client
+neighbors:
+  - pair: [1, 2]
+  - pair: [2, 3]
+  - pair: [2, 7]
+  - pair: [3, 4]
+  - pair: [3, 5]
+  - pair: [5, 10]
+  - pair: [5, 11]
+  - pair: [5, 6]
+  - pair: [6, 9]
+  - pair: [7, 5]
+  - pair: [7, 6]
+  - pair: [7, 8]

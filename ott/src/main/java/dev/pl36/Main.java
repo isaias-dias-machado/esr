@@ -8,6 +8,7 @@ import dev.pl36.net.api.ControlMessengerListener;
 import dev.pl36.net.api.DataChannelListener;
 import dev.pl36.routing.FlowEntry;
 import dev.pl36.routing.RoutingTable;
+import dev.pl36.scenario.Node;
 import dev.pl36.scenario.Scenario;
 import dev.pl36.scenario.ScenarioParser;
 import dev.pl36.streaming.ConsoleFrameHandler;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ import java.util.concurrent.CountDownLatch;
  * <ul>
  *   <li>{@code ott <node_id> <scenario.yaml>} — overlay node: parses the
  *       scenario and prints the local routing table.</li>
+ *   <li>{@code ott roles <scenario.yaml>} — print one {@code id role ip_addr}
+ *       line per node (sorted by node id) so deployment scripts read the
+ *       roles from the YAML instead of embedding a role table.</li>
  *   <li>{@code ott server [--video file]... [--flow id]... [--fps n]
  *       [--control port] [--dest host:port]} — an OTT node that <em>owns</em>
  *       flows (one per {@code --video}, flow id = video file name unless
@@ -91,6 +96,8 @@ public class Main {
     private static final String HELP = """
             usage:
               ott <node_id> <scenario.yaml>            overlay node: parse scenario, print routing table
+              ott roles <scenario.yaml>                print one "id role ip_addr" line per node (sorted by id), the
+                                                       machine-readable form scripts/localhost-demo.sh consumes
               ott server [--video file]... [--flow id]... [--fps n] [--control port] [--dest host:port]
                                                        serve flows (id = video file name), answer WANT_FLOW on
                                                        the control port (default 25001); --dest is a test-only
@@ -109,13 +116,15 @@ public class Main {
         switch (args[0]) {
             case "server" -> runServer(parseFlags(args));
             case "client" -> runClient(parseFlags(args));
+            case "roles" -> runRoles(args);
             default -> runNode(args);
         }
     }
 
     /**
      * Purpose: overlay node mode — {@code ott <node_id> <scenario.yaml>}.
-     * Parses the scenario and prints the local routing table.
+     * Parses the scenario and prints the local routing table (each printed
+     * node carries its role).
      */
     private static void runNode(String[] args) {
         if (args.length != 2) {
@@ -129,6 +138,29 @@ public class Main {
             Scenario scenario = ScenarioParser.parse(scenarioPath);
             RoutingTable routingTable = RoutingTable.from(scenario, selfId);
             System.out.println(routingTable);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Purpose: {@code ott roles <scenario.yaml>} — print one
+     * {@code id role ip_addr} line per node, sorted by node id, so
+     * {@code scripts/localhost-demo.sh} reads the roles from the YAML itself
+     * (single source of truth) instead of embedding a role table. The output
+     * is machine-readable: no header, one space-separated triple per line.
+     */
+    private static void runRoles(String[] args) {
+        if (args.length != 2) {
+            throw new IllegalArgumentException(HELP);
+        }
+
+        try {
+            Scenario scenario = ScenarioParser.parse(Path.of(args[1]));
+            scenario.nodes().stream()
+                    .sorted(Comparator.comparingInt(Node::id))
+                    .forEach(node -> System.out.printf("%d %s %s%n",
+                            node.id(), node.role().yamlName(), node.ipAddr()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

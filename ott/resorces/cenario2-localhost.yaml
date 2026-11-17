@@ -1,0 +1,32 @@
+port: 5001
+nodes:
+  - id: 0
+    ip_addr: 127.0.0.1/8
+    description: "n16 (localhost)"
+    role: server
+  - id: 1
+    ip_addr: 127.0.0.2/8
+    description: "n6 (localhost)"
+    role: relay
+  - id: 2
+    ip_addr: 127.0.0.3/8
+    description: "n3 (localhost)"
+    role: relay
+  - id: 3
+    ip_addr: 127.0.0.4/8
+    description: "n2 (localhost)"
+    role: relay
+  - id: 4
+    ip_addr: 127.0.0.5/8
+    description: "n20 (localhost)"
+    role: client
+  - id: 5
+    ip_addr: 127.0.0.6/8
+    description: "n17 (localhost)"
+    role: client
+neighbors:
+  - pair: [0, 1]
+  - pair: [1, 2]
+  - pair: [1, 3]
+  - pair: [2, 4]
+  - pair: [3, 5]
