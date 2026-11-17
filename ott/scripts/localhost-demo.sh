@@ -7,21 +7,21 @@
 # Usage: scripts/localhost-demo.sh <command> [args]
 #
 # Commands:
-#   up <scenario> [node_id ...]    start all nodes except the given node ids
-#   start <scenario> <node_id>     start node <node_id> (mid-stream join)
-#   down <scenario>                stop the scenario (idempotent, logs are kept)
-#   kill <scenario> <node_id>      abruptly kill node <node_id> (failure cases)
-#   status <scenario>              show per-node role and process state
-#   logs <scenario> [node_id]      tail node <node_id>'s log, or all of them
-#   -h, --help                     show this help and exit
+#   up <scenario_number> [node_id ...]       start all nodes except given node ids
+#   start <scenario_number> <node_id>        start node <node_id> (mid-stream join)
+#   down <scenario_number>                   stop the scenario (idempotent, logs kept)
+#   kill <scenario_number> <node_id>         abruptly kill node <node_id> (failure case)
+#   status <scenario_number>                 show per-node role and process state
+#   logs <scenario_number> [node_id]         tail node <node_id>'s log, or all
+#   -h, --help                               show this help and exit
 #
 # Environment:
 #   RUN_ROOT              run directory (default: /tmp/ott-localhost)
 #   CLASSPATH_FILE        dependency classpath cache (default: /tmp/ott-cp.txt)
 #
 # Notes:
-#   <scenario>   one of 1, 2 or 3 — the test scenario to act on
-#   <node_id>    a node id declared in the scenario YAML; see `status <scenario>`
+#   <scenario_number>    1, 2 or 3 — the test scenario to act on
+#   <node_id>           a node id declared in the scenario YAML (`status` lists them)
 #   run one scenario at a time (scenarios share the same port ranges)
 #   full localhost runbook: context/scenarios.md
 #
