@@ -76,9 +76,23 @@ scenario_yaml() {  # scenario_yaml <n> — path relative to OTT_DIR
     echo "resorces/cenario$1-localhost.yaml"
 }
 
+# Build staleness: newest .java under src/ vs newest .class under
+# target/classes (integer seconds, stat %Y). Same-second edit+compile is
+# the one blind spot: the build looks fresh and no recompile happens.
+needs_compile() {  # needs_compile — true when the build is missing or stale
+    [ -d "$OTT_DIR/target/classes" ] || return 0
+    local newest_class newest_source
+    newest_class=$(find "$OTT_DIR/target/classes" -name '*.class' -exec stat -c %Y {} + |
+        sort -rn | head -n1)
+    newest_source=$(find "$OTT_DIR/src" -name '*.java' -exec stat -c %Y {} + |
+        sort -rn | head -n1)
+    [ -z "$newest_class" ] && return 0
+    [ "${newest_source:-0}" -gt "$newest_class" ]
+}
+
 ensure_runtime() {
-    if [ ! -d "$OTT_DIR/target/classes" ]; then
-        echo "compiling $OTT_DIR (target/classes missing)"
+    if needs_compile; then
+        echo "compiling $OTT_DIR (build missing or older than the sources)"
         mvn -q -f "$OTT_DIR/pom.xml" compile
     fi
     if [ ! -s "$CLASSPATH_FILE" ]; then
