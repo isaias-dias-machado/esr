@@ -31,12 +31,12 @@ M1 — streaming over UDP, in isolation
   report). Plan: /tmp/vibe/esr-tp2-person-c-multistream-impl.md.
 
 M2 — scenarios & testbed
-- Not done — n17 typo fix: resorces/cenario1.yaml:13 and resorces/cenario2.yaml:19
+- Done — n17 typo fix: resorces/cenario1.yaml:13 and resorces/cenario2.yaml:19
   still declare n17 as 10.1.11.12/24 (should be 10.1.11.17/24 per
   context/scenarios.md).
 - Not done — localhost variant of cenario1.yaml.
-- Not done — resorces/cenario3.yaml (11 overlay nodes, 5 clients).
-- Not done — java -version inside a running CORE node (openjdk-21-jdk-headless
+- Done — resorces/cenario3.yaml (11 overlay nodes, 5 clients).
+- Done — java -version inside a running CORE node (openjdk-21-jdk-headless
   is in packages.txt but unverified in a node).
 
 M3 — first end-to-end over the real overlay

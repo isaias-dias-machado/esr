@@ -10,7 +10,7 @@ nodes:
     ip_addr: 10.1.12.20/24
     description: "n20"
   - id: 3
-    ip_addr: 10.1.11.12/24
+    ip_addr: 10.1.11.17/24
     description: "n17"
 neighbors:
   - pair: [0, 1]
