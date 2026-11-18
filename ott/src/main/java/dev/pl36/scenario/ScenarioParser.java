@@ -19,19 +19,27 @@ import java.util.TreeSet;
  * <p>Invariants: the mapper is immutable after class initialisation and safe to
  * share between threads. Parsing is strict: unknown keys, missing keys and
  * {@code null} where a primitive is expected are reported as errors instead of
- * being silently ignored.</p>
+ * being silently ignored. Missing keys are enforced per property, through
+ * {@code @JsonProperty(required = true)} on every load-bearing creator
+ * property, and not through the blanket
+ * {@code FAIL_ON_MISSING_CREATOR_PROPERTIES}: that feature fires before any
+ * per-property default in this Jackson version, so the one deliberately
+ * optional key — a node's {@code role}, which defaults to
+ * {@link NodeRole#RELAY} in {@link Node} — could not be omitted while the
+ * blanket feature is on.</p>
  *
  * <p>Failure modes: all parse problems surface as {@link IOException}
  * subclasses: {@link com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException}
  * for unknown keys, {@link com.fasterxml.jackson.databind.exc.MismatchedInputException}
- * for type/shape errors, and {@link InvalidScenarioException} when the file is
+ * for type/shape errors (including missing required keys, unknown roles and
+ * explicit {@code null} where a primitive is expected), and
+ * {@link InvalidScenarioException} when the file is
  * well-formed YAML but breaks a scenario rule (see {@link #validate(Scenario)}).</p>
  */
 public final class ScenarioParser {
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory())
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
 
     private ScenarioParser() {

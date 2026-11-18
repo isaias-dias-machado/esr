@@ -12,7 +12,10 @@ import java.util.List;
  * </pre>
  *
  * <p>Invariants: {@code pair} holds exactly two node ids and the list is
- * immutable. The ids are checked against the declared nodes by
+ * immutable. The key is {@code required = true}, so a missing {@code pair} is
+ * a parse error even though the parser no longer enables the blanket
+ * {@code FAIL_ON_MISSING_CREATOR_PROPERTIES} (an optional key must exist: the
+ * {@code role} of a node). The ids are checked against the declared nodes by
  * {@link ScenarioParser}, not by this record.</p>
  *
  * <p>Failure modes: constructing a neighbour whose {@code pair} is {@code null},
@@ -20,7 +23,7 @@ import java.util.List;
  * {@link NullPointerException} or {@link IllegalArgumentException}. While
  * parsing, Jackson wraps those in an {@code IOException} subclass.</p>
  */
-public record Neighbor(@JsonProperty("pair") List<Integer> pair) {
+public record Neighbor(@JsonProperty(value = "pair", required = true) List<Integer> pair) {
 
     public Neighbor {
         pair = List.copyOf(pair);

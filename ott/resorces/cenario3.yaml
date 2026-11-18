@@ -3,36 +3,47 @@ nodes:
   - id: 1
     ip_addr: 10.1.15.16/24
     description: "n16"
+    role: server
   - id: 2
     ip_addr: 10.0.16.2/30
     description: "n10"
+    role: relay
   - id: 3
     ip_addr: 10.0.18.1/30
     description: "n8"
+    role: relay
   - id: 4
     ip_addr: 10.1.13.22/24
     description: "n22"
+    role: client
   - id: 5
     ip_addr: 10.0.6.1/30
     description: "n3"
+    role: relay
   - id: 6
     ip_addr: 10.0.5.1/30
     description: "n2"
+    role: server
   - id: 7
     ip_addr: 10.0.12.1/30
     description: "n5"
+    role: relay
   - id: 8
     ip_addr: 10.1.14.24/24
     description: "n24"
+    role: client
   - id: 9
     ip_addr: 10.1.11.18/24
     description: "n18"
+    role: client
   - id: 10
     ip_addr: 10.1.12.19/24
     description: "n19"
+    role: client
   - id: 11
     ip_addr: 10.1.12.20/24
     description: "n20"
+    role: client
 neighbors:
   - pair: [1, 2]
   - pair: [2, 3]
