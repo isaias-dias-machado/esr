@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * DEPRECATED after agent/transport
  * The minimal real implementation of {@link DataChannel} over UDP: one
  * {@link DatagramSocket} and a fixed set of peers.
  *
