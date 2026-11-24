@@ -1,0 +1,11 @@
+how did we choose the flood periodicity: tradeoffs
+
+report: what is done, how it is done, and why. no fluff. Must have a graph overlay in a image.
+
+logs should not be dense
+logs show:
+  trees (most important) -> parent and children; everything else is secondary
+
+test: on Core, adding latency should switch the route (no packets flow on the old route), removing it should restore, killing a node swaps.
+
+Interesting extra: on critical deaths new edge is created
