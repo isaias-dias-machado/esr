@@ -56,8 +56,8 @@ The report and the live demo must show:
 | `src/main/java/dev/pl36/streaming/` | ProgEx extraction (see `docs/ProgEx/`): `MjpegVideoStream` (movie.Mjpeg frame reader), `StreamSource`/`StreamSink` (numbered frames over `DataChannel` via `DataPacketHeader`, gap-tolerant; source destinations may be a live supplier), `FrameHandler`/`ConsoleFrameHandler`, `StreamingLoopbackDemo` in-JVM demo. |
 | `resorces/cenario1.yaml`, `resorces/cenario2.yaml`, `resorces/cenario3.yaml` | Test scenarios, all with explicit `role` fields (scenario 3 has two servers, ids 1 and 6; see `context/scenarios.md`). |
 | `resorces/cenario1-localhost.yaml` … `cenario3-localhost.yaml` | Same scenarios on one host: node id x → `127.0.0.(x+1)/8`, overlay port 5000/5001/5002, roles inherited; driven by the deploy script. |
-| `scripts/localhost-demo.sh` | Deploy script for one laptop: `up/start/down/stop/kill/status/roles/logs` per scenario, roles read from the YAML via `ott roles`; run dir `/tmp/ott-localhost/<n>/`. Relays run real overlay node processes (HELLO/GOODBYE, redial); `stop` is graceful, `kill` abrupt. Header of the script documents the port scheme; the 8-case runbook lives in `context/scenarios.md`. |
-| `scripts/tmux-demo.sh` | Paced tmux tour of the transport work: driver pane narrates and runs localhost-demo.sh, one pane per watched node log. Acts 1-7 (baseline, mid-stream join, abrupt leave, two servers, server failure, overlay churn, wrap-up), selectable by number. Enter advances, q tears everything down. |
+| `scripts/localhost-demo.sh` | Deploy script for one laptop: `up/start/down/stop/kill/status/roles/logs` per scenario, roles read from the YAML via `ott roles`; run dir `/tmp/ott-localhost/<n>/`. Relays run real overlay node processes (HELLO/GOODBYE, redial); `stop` is graceful, `kill` abrupt; every start pre-checks its port (clear error naming the holder instead of a BindException) and every `down` also sweeps orphaned node processes of this checkout that no pid file records. Header of the script documents the port scheme; the 8-case runbook lives in `context/scenarios.md`. |
+| `scripts/demo.sh` | Paced tour of the transport work: acts 1-7 (baseline, mid-stream join, abrupt leave, two servers, server failure, overlay churn, wrap-up), selectable by number, all state changes through localhost-demo.sh. Default mode prints each stage's curated evidence (the nodes' own log lines) in one stream; `--panes kitty` shows it as kitty splits, `--panes tmux` as a tmux session. Enter advances, r repeats the current act (cold restart), q tears everything down. |
 | `resorces/movie.Mjpeg`, `resorces/movie2.Mjpeg` … `movie4.Mjpeg` | Test videos copied from `docs/ProgEx/` (500 MJPEG frames each); the 2-servers x 2-streams demo uses 4 distinct flow ids. |
 | `pom.xml` | Java 21, Jackson YAML, no wrapper and no shade/exec plugin. |
 
@@ -107,6 +107,7 @@ are scripted instead of hand-typed:
 
 ```sh
 scripts/localhost-demo.sh up 1     # scenario 1 on 127.0.0.1 (roles from the YAML)
+scripts/demo.sh                   # the transport tour: single stream, all 7 acts
 scripts/localhost-demo.sh logs 1   # frame evidence (per node; Ctrl-C stops the tail only)
 scripts/localhost-demo.sh down 1   # stop the scenario, logs are kept
 ```
