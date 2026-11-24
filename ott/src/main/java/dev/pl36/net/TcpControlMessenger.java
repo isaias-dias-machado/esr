@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * every neighbour before closing, and a received GOODBYE ends the connection
  * as a clean leave ("left") rather than a loss ("lost"). The listener sees
  * {@code onNeighborDown} in both cases; the difference shows in the log.
- * M2 also adds a KEEPALIVE: every neighbour is sent one each period (10 s by
+ * M2 also adds a KEEPALIVE: every neighbour is sent one each period (2 s by
  * default), and a neighbour silent for 3 periods is declared lost. This
  * catches what EOF cannot: a cut link with both processes alive (a half-open
  * connection). KEEPALIVEs never reach the listener.</p>
@@ -92,8 +92,17 @@ public final class TcpControlMessenger implements ControlMessenger {
     /** How long close() waits, in total, for the GOODBYEs to leave before closing the sockets. */
     static final long GOODBYE_FLUSH_MILLIS = 500;
 
-    /** Default KEEPALIVE period: every neighbour is sent one this often. */
-    public static final long DEFAULT_KEEPALIVE_INTERVAL_MILLIS = 10_000;
+    /**
+     * Default KEEPALIVE period: every neighbour is sent one this often.
+     *
+     * <p>Why 2 s and not the 10 s of routing protocols such as OSPF: a video
+     * stream that freezes for 30-40 s while a dead link goes unnoticed is
+     * not acceptable, and a KEEPALIVE costs a few dozen bytes per neighbour
+     * every 2 s — negligible next to the stream. With 3 misses a silent
+     * neighbour is detected in 6-8 s, while delays of up to ~4 s (far above
+     * any latency added to a CORE link) still raise no false alarm.</p>
+     */
+    public static final long DEFAULT_KEEPALIVE_INTERVAL_MILLIS = 2_000;
 
     /** Default number of periods of silence after which a neighbour is declared lost. */
     public static final int DEFAULT_KEEPALIVE_MISSES = 3;
@@ -130,8 +139,8 @@ public final class TcpControlMessenger implements ControlMessenger {
 
     /**
      * Purpose: same as {@link #TcpControlMessenger(RoutingTable, int)} with
-     * explicit KEEPALIVE timing — for tests, or a demo that must detect a cut
-     * link faster than the 30 s default.
+     * explicit KEEPALIVE timing — for tests, or to trade detection speed for
+     * tolerance to delay differently from the 2 s x 3 default.
      *
      * @param keepaliveIntervalMillis how often a KEEPALIVE is sent to each
      *                                neighbour (also how often silence is checked)
