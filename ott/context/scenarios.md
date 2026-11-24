@@ -168,8 +168,10 @@ script itself):
 scripts/localhost-demo.sh up <1|2|3> [id ...]   # all nodes except the listed ids
 scripts/localhost-demo.sh start <1|2|3> <id>    # one node (mid-stream join)
 scripts/localhost-demo.sh down <1|2|3>          # stop the scenario (idempotent)
-scripts/localhost-demo.sh kill <1|2|3> <id>     # kill one node abruptly
-scripts/localhost-demo.sh status <1|2|3>        # per-node role + process state
+scripts/localhost-demo.sh kill <1|2|3> <id>     # kill one node abruptly (EOF)
+scripts/localhost-demo.sh stop <1|2|3> <id>    # stop one node gracefully (GOODBYE)
+scripts/localhost-demo.sh status <1|2|3>       # per-node role + process state
+scripts/localhost-demo.sh roles <1|2|3>        # the YAML's id role ip_addr table
 scripts/localhost-demo.sh logs <1|2|3> [id]     # tail one log, or all of them
 ```
 
@@ -178,9 +180,11 @@ time — they share these ranges): server `s` gets control port `25001+s`,
 client `c` listens on `25010+c` and attaches to the server with index
 `c % server-count`, so scenario 3's five clients split 3/2 across its two
 servers. Server 0 serves `movie.Mjpeg` + `movie2.Mjpeg`, the second server
-serves `movie3.Mjpeg` + `movie4.Mjpeg`. Until overlay forwarding (M3) lands,
-relay nodes are parse-checked (`ott <id> <scenario>`) instead of running a
-process; `up`/`start` is then the single place to switch to real node mode.
+serves `movie3.Mjpeg` + `movie4.Mjpeg`. Relay nodes run the real overlay
+process (`ott <id> <scenario>`: neighbour mesh with redial, HELLO/GOODBYE);
+data-plane forwarding (M3) is not wired yet, so relays carry no frames —
+their logs show the control-plane mesh. The matrix's showcase moments of the
+transport are also scripted as a paced tmux tour: `scripts/tmux-demo.sh`.
 
 
 ## Suggested test matrix
@@ -210,7 +214,7 @@ change.
 | 3 | two clients, different branches | 2 | `S up 2`; `S logs 2 4`; `S logs 2 5` | nodes 4 and 5 receive over disjoint branches (0-1-2-4 vs 0-1-3-5); replication at the branch point needs M3 |
 | 4 | client joins mid-stream | 1 | `S up 1 3`; while node 2 logs frames: `S start 1 3`; `S logs 1 3` | node 3 logs its first frame already mid-stream (high sequence number, gap-tolerant), the stream does not restart |
 | 5 | client leaves mid-stream | 1 | `S up 1`; `S kill 1 3`; `S logs 1 2`; `S status 1` | node 3 dies abruptly; node 2 keeps receiving; server drops the destination from the flow entry |
-| 6 | intermediate node killed | 2 | `S up 2`; `S kill 2 1`; `S logs 2 4` | needs M3 — today relays are parse-checked, `kill` refuses with "no process until M3"; after M3 note the topology: killing relay 1 isolates the server (node 0's only link), i.e. scenario 2 demonstrates *no* alternative route; use scenario 3's `5–6–7` triangle for a real failover (e.g. kill relay 5) |
+| 6 | intermediate node killed | 2 | `S up 2`; `S kill 2 1`; `S logs 2 4` | relay 1 is a real overlay node now: `kill` works, and its neighbours log `neighbour 1 lost: connection closed by the peer` (`stop` instead of `kill` logs `left: GOODBYE received` — `scripts/tmux-demo.sh` act 6 shows the contrast). Data-plane failover still needs M3; note the topology: killing relay 1 isolates the server (node 0's only link), i.e. scenario 2 demonstrates *no* alternative route; use scenario 3's `5–6–7` triangle for a real failover (e.g. kill relay 5) |
 | 7 | server killed | 2 | `S up 2`; `S kill 2 0`; `S logs 2 4`; `S status 2` | clients stay up, log `client: control link to node 0 down`, and the stream freezes; recovery today means restarting server and clients (`S start` per node) — automatic recovery is future work |
 | 8 | two servers, two streams each | 3 | `S up 3`; `S logs 3 4`; `S logs 3 8`; `S status 3` | server 1 owns `movie`+`movie2`, server 6 owns `movie3`+`movie4`; clients 4/9/11 watch server 1's flows, clients 8/10 watch server 6's — four independent flow entries at once |
 

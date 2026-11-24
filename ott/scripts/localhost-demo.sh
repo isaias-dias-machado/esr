@@ -10,8 +10,12 @@
 #   up <scenario_number> [node_id ...]       start all nodes except given node ids
 #   start <scenario_number> <node_id>        start node <node_id> (mid-stream join)
 #   down <scenario_number>                   stop the scenario (idempotent, logs kept)
-#   kill <scenario_number> <node_id>         abruptly kill node <node_id> (failure case)
+#   stop <scenario_number> <node_id>         gracefully stop node <node_id>
+#                                           (it sends GOODBYE to its neighbours)
+#   kill <scenario_number> <node_id>         abruptly kill node <node_id> (failure case:
+#                                           SIGKILL, neighbours detect the loss by EOF)
 #   status <scenario_number>                 show per-node role and process state
+#   roles <scenario_number>                  print the "id role ip_addr" table of the scenario
 #   logs <scenario_number> [node_id]         tail node <node_id>'s log, or all
 #   -h, --help                               show this help and exit
 #
@@ -38,9 +42,10 @@
 #   - server 0 serves movie.Mjpeg + movie2.Mjpeg, every further server
 #     serves movie3.Mjpeg + movie4.Mjpeg (distinct flow ids everywhere).
 #
-# Today relay nodes are parse-checked once (`ott <id> <scenario>`) instead of
-# running an overlay process: overlay forwarding (M3) is not in yet. When
-# node mode runs real processes, `start_node` is the single place to change.
+# Relay nodes run the real overlay process now: node mode (`ott <id>
+# <scenario>`) keeps the neighbour mesh alive with redial and HELLO/GOODBYE
+# (agent/transport). Data-plane forwarding (M3) is not wired yet, so relays
+# forward no frames — their logs show the control-plane mesh instead.
 
 set -euo pipefail
 
@@ -61,8 +66,8 @@ RELAY_IDS=()
 # Paths, classpath and the many `ott` invocations
 # ---------------------------------------------------------------------
 
-usage() {  # usage — print this file's header help block (lines 2-26)
-    sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+usage() {  # usage — print this file's header help block (lines 2-30)
+    sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_scenario() {
@@ -245,13 +250,19 @@ start_node() {  # start_node <n> <id> — start one node according to its YAML r
             echo "node $id ($role): started, listen $listen, wants $(server_flows "$server_index") from 127.0.0.1:$control"
             ;;
         relay)
-            # A relay has no overlay process until M3 lands; the parse check is
-            # today's start_node equivalent and doubles as free YAML validation.
-            {
-                echo "=== relay parse check (no overlay process until M3) ==="
-                ott "$id" "$(scenario_yaml "$n")"
-            } >>"$(log_file "$n" "$id")" 2>&1
-            echo "node $id ($role): parse checked (no overlay process until M3)"
+            # A relay runs the real overlay process (node mode): the neighbour
+            # mesh with redial and HELLO/GOODBYE is the observable behaviour;
+            # data-plane forwarding (M3) is not wired yet, so it carries no
+            # frames — the node-mode listener only logs control messages and
+            # counts datagrams per neighbour.
+            start_process "$n" "$id" "$id" "$(scenario_yaml "$n")"
+            sleep 1
+            if ! is_running "$n" "$id"; then
+                echo "relay node $id died at startup, log tail:" >&2
+                tail -20 "$(log_file "$n" "$id")" >&2
+                exit 1
+            fi
+            echo "node $id ($role): started, overlay node (log lines are prefixed [node $id])"
             ;;
     esac
 }
@@ -338,16 +349,14 @@ cmd_down() {  # cmd_down <n>
     echo "scenario $1 down (logs kept in $(run_dir "$1"))"
 }
 
-cmd_kill() {  # cmd_kill <n> <id>
+# cmd_kill <n> <id> — abruptly kill one node: SIGKILL runs no exit code in the
+# node, so neighbours detect the loss by EOF instead of a GOODBYE.
+cmd_kill() {
     local n=$1 id=$2
     load_roles "$n"
     local role=${NODE_ROLE[$id]:-}
     if [ -z "$role" ]; then
         echo "node id $id is not declared in scenario $n" >&2
-        exit 1
-    fi
-    if [ "$role" = "relay" ]; then
-        echo "node $id is a relay: relays have no process until overlay forwarding (M3) lands" >&2
         exit 1
     fi
     local pidfile pid
@@ -364,7 +373,43 @@ cmd_kill() {  # cmd_kill <n> <id>
     fi
     kill -9 "$pid"
     rm -f "$pidfile"
-    echo "node $id of scenario $n killed abruptly (pid $pid)"
+    echo "node $id ($role) of scenario $n killed abruptly (pid $pid; neighbours see EOF, no GOODBYE)"
+}
+
+# cmd_stop <n> <id> — gracefully stop one node: SIGTERM runs the node's shutdown
+# hook, which sends GOODBYE to every live neighbour before exiting.
+cmd_stop() {
+    local n=$1 id=$2
+    load_roles "$n"
+    local role=${NODE_ROLE[$id]:-}
+    if [ -z "$role" ]; then
+        echo "node id $id is not declared in scenario $n" >&2
+        exit 1
+    fi
+    local pidfile pid
+    pidfile=$(pid_file "$n" "$id")
+    if [ ! -f "$pidfile" ]; then
+        echo "node $id of scenario $n is not running (no pid file)" >&2
+        exit 1
+    fi
+    pid=$(cat "$pidfile")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$pidfile"
+        echo "node $id of scenario $n was already dead (stale pid file removed)" >&2
+        exit 1
+    fi
+    kill -TERM "$pid"
+    rm -f "$pidfile"
+    echo "node $id ($role) of scenario $n stopping gracefully (pid $pid; sends GOODBYE to its neighbours)"
+}
+
+# cmd_roles <n> — print the scenario's id/role/ip_addr table, straight from
+# the YAML via `ott roles` (the single source of truth for both this script
+# and any doc or demo on top of it).
+cmd_roles() {
+    require_scenario "$1"
+    ensure_runtime
+    ott roles "$(scenario_yaml "$1")"
 }
 
 cmd_status() {  # cmd_status <n>
@@ -385,7 +430,7 @@ cmd_status() {  # cmd_status <n>
                 state="dead"
             fi
         elif [ -f "$(log_file "$n" "$id")" ]; then
-            state="stopped or parse checked (log exists, no pid)"
+            state="stopped (log exists, no pid)"
         fi
         printf '%-4s %-8s %-8s %s\n' "$id" "$role" "${pid:--}" "$state"
     done
@@ -428,8 +473,10 @@ case "$command" in
     up)     [ "$#" -ge 1 ] || { usage; exit 2; }; cmd_up "$@" ;;
     start)  [ "$#" -eq 2 ] || { usage; exit 2; }; cmd_start "$1" "$2" ;;
     down)   [ "$#" -eq 1 ] || { usage; exit 2; }; cmd_down "$1" ;;
+    stop)   [ "$#" -eq 2 ] || { usage; exit 2; }; cmd_stop "$1" "$2" ;;
     kill)   [ "$#" -eq 2 ] || { usage; exit 2; }; cmd_kill "$1" "$2" ;;
     status) [ "$#" -eq 1 ] || { usage; exit 2; }; cmd_status "$1" ;;
+    roles)  [ "$#" -eq 1 ] || { usage; exit 2; }; cmd_roles "$1" ;;
     logs)   [ "$#" -ge 1 ] || { usage; exit 2; }; cmd_logs "$@" ;;
     -h|--help|help) usage ;;
     *) usage; exit 2 ;;
