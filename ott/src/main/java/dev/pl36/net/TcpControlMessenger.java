@@ -52,7 +52,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * place. M2 adds a GOODBYE on graceful shutdown: {@link #close()} sends it to
  * every neighbour before closing, and a received GOODBYE ends the connection
  * as a clean leave ("left") rather than a loss ("lost"). The listener sees
- * {@code onNeighborDown} in both cases; the difference shows in the log.</p>
+ * {@code onNeighborDown} in both cases; the difference shows in the log.
+ * M2 also adds a KEEPALIVE: every neighbour is sent one each period (10 s by
+ * default), and a neighbour silent for 3 periods is declared lost. This
+ * catches what EOF cannot: a cut link with both processes alive (a half-open
+ * connection). KEEPALIVEs never reach the listener.</p>
  *
  * <p>Tie-break: for each pair of neighbours only the node with the lower id
  * connects; the higher id only accepts. So there is exactly one TCP
@@ -88,8 +92,17 @@ public final class TcpControlMessenger implements ControlMessenger {
     /** How long close() waits, in total, for the GOODBYEs to leave before closing the sockets. */
     static final long GOODBYE_FLUSH_MILLIS = 500;
 
+    /** Default KEEPALIVE period: every neighbour is sent one this often. */
+    public static final long DEFAULT_KEEPALIVE_INTERVAL_MILLIS = 10_000;
+
+    /** Default number of periods of silence after which a neighbour is declared lost. */
+    public static final int DEFAULT_KEEPALIVE_MISSES = 3;
+
     private final RoutingTable table;
     private final int port;
+    private final long keepaliveIntervalMillis;
+    private final int keepaliveMisses;
+    private final long silenceLimitNanos;
     private volatile ControlMessengerListener listener;
     private volatile Lifecycle lifecycle = Lifecycle.NEW;
     private ServerSocket serverSocket;
@@ -112,8 +125,33 @@ public final class TcpControlMessenger implements ControlMessenger {
      * @param port  the TCP port shared by every node of the scenario
      */
     public TcpControlMessenger(RoutingTable table, int port) {
+        this(table, port, DEFAULT_KEEPALIVE_INTERVAL_MILLIS, DEFAULT_KEEPALIVE_MISSES);
+    }
+
+    /**
+     * Purpose: same as {@link #TcpControlMessenger(RoutingTable, int)} with
+     * explicit KEEPALIVE timing — for tests, or a demo that must detect a cut
+     * link faster than the 30 s default.
+     *
+     * @param keepaliveIntervalMillis how often a KEEPALIVE is sent to each
+     *                                neighbour (also how often silence is checked)
+     * @param keepaliveMisses         how many periods of silence declare a
+     *                                neighbour lost (at least 2, so one late
+     *                                KEEPALIVE is tolerated)
+     */
+    public TcpControlMessenger(RoutingTable table, int port,
+                               long keepaliveIntervalMillis, int keepaliveMisses) {
+        if (keepaliveIntervalMillis <= 0) {
+            throw new IllegalArgumentException("keepalive interval must be positive: " + keepaliveIntervalMillis);
+        }
+        if (keepaliveMisses < 2) {
+            throw new IllegalArgumentException("keepalive misses must be at least 2: " + keepaliveMisses);
+        }
         this.table = Objects.requireNonNull(table, "table");
         this.port = port;
+        this.keepaliveIntervalMillis = keepaliveIntervalMillis;
+        this.keepaliveMisses = keepaliveMisses;
+        this.silenceLimitNanos = keepaliveIntervalMillis * keepaliveMisses * 1_000_000;
     }
 
     // ------------------------------------------------------------------
@@ -149,6 +187,7 @@ public final class TcpControlMessenger implements ControlMessenger {
         log("listening on " + localAddress);
 
         Thread.ofVirtual().name("accept-" + table.self().id()).start(this::acceptLoop);
+        Thread.ofVirtual().name("keepalive-" + table.self().id()).start(this::keepaliveLoop);
 
         // Step 3: dial only the neighbours with a higher id (tie-break).
         for (Node neighbour : table.neighbours().values()) {
@@ -205,6 +244,10 @@ public final class TcpControlMessenger implements ControlMessenger {
             DataInputStream in = new DataInputStream(socket.getInputStream());
             while (true) {
                 ControlMessage message = readFrame(in);
+                connection.heardNow();   // any frame proves the neighbour is alive
+                if (message.type() == MessageType.KEEPALIVE) {
+                    continue;            // transport-only: never reaches the listener
+                }
                 if (message.type() == MessageType.GOODBYE) {
                     // A graceful leave: the finally below takes the usual down path.
                     log("neighbour " + peerId + " left: GOODBYE received");
@@ -214,11 +257,12 @@ public final class TcpControlMessenger implements ControlMessenger {
             }
         } catch (EOFException eof) {
             // While we are closing ourselves, an EOF is just the peer answering our GOODBYE.
-            if (lifecycle == Lifecycle.STARTED) {
+            if (lifecycle == Lifecycle.STARTED && !connection.timedOut) {
                 log("neighbour " + peerId + " lost: connection closed by the peer");
             }
         } catch (IOException | IllegalArgumentException broken) {
-            if (lifecycle == Lifecycle.STARTED) {
+            // A KEEPALIVE timeout closes the socket itself and has already logged why.
+            if (lifecycle == Lifecycle.STARTED && !connection.timedOut) {
                 log("neighbour " + peerId + " lost: " + broken.getMessage());
             }
         } finally {
@@ -558,6 +602,52 @@ public final class TcpControlMessenger implements ControlMessenger {
         }
     }
 
+    // ------------------------------------------------------------------
+    // M2 — KEEPALIVE: detect neighbours that went silent
+    // ------------------------------------------------------------------
+
+    /**
+     * Purpose: every {@code keepaliveIntervalMillis}, for each live neighbour,
+     * either declare it lost (silent longer than the limit) or send it a
+     * KEEPALIVE.
+     *
+     * <p>Why on the receiving side: a {@code write} succeeds as soon as the
+     * OS buffers the bytes, and on a cut link TCP keeps retransmitting for
+     * up to ~15-30 minutes before reporting an error. Counting silence lets
+     * the overlay decide in {@code interval x misses} instead. Both ends send
+     * and both watch, so each detects the cut on its own.</p>
+     *
+     * <p>A lost neighbour is closed here; its reader thread then takes the
+     * usual path (unregister, {@code onNeighborDown}, and the dialer of the
+     * lower id redials).</p>
+     */
+    private void keepaliveLoop() {
+        while (lifecycle == Lifecycle.STARTED) {
+            try {
+                Thread.sleep(keepaliveIntervalMillis);
+            } catch (InterruptedException interrupted) {
+                return;
+            }
+            if (lifecycle != Lifecycle.STARTED) {
+                return;
+            }
+            byte[] keepalive = WireCodec.encode(new ControlMessage(MessageType.KEEPALIVE,
+                    nextMessageId.getAndIncrement(), null, String.valueOf(table.self().id())));
+            for (Connection connection : connections.values()) {
+                long silence = connection.silenceNanos();
+                if (silence > silenceLimitNanos) {
+                    connection.timedOut = true;
+                    log("neighbour " + connection.peerId + " lost: silent for " + silence / 1_000_000
+                            + " ms (no frame in " + keepaliveMisses + " keepalive periods of "
+                            + keepaliveIntervalMillis + " ms)");
+                    connection.shutdown();   // the reader thread takes the usual down path
+                } else {
+                    connection.enqueue(keepalive);
+                }
+            }
+        }
+    }
+
     private void requireStarted() {
         if (lifecycle != Lifecycle.STARTED) {
             throw new IllegalStateException("messenger " + lifecycle.name().toLowerCase());
@@ -581,10 +671,26 @@ public final class TcpControlMessenger implements ControlMessenger {
         private final BlockingQueue<byte[]> outbox = new LinkedBlockingQueue<>();
         private final Thread writer;
 
+        /** {@link System#nanoTime()} of the last frame received; written by the reader, read by the keepalive thread. */
+        private volatile long lastHeardNanos = System.nanoTime();
+
+        /** Set by the keepalive thread when it closes this connection for silence, so the reader does not log a second reason. */
+        private volatile boolean timedOut;
+
         private Connection(int peerId, Socket socket) {
             this.peerId = peerId;
             this.socket = socket;
             this.writer = Thread.ofVirtual().name("write-" + peerId).start(this::writeLoop);
+        }
+
+        /** Purpose: record that a frame just arrived from this neighbour. */
+        private void heardNow() {
+            lastHeardNanos = System.nanoTime();
+        }
+
+        /** Purpose: how long this neighbour has been silent, in nanoseconds. */
+        private long silenceNanos() {
+            return System.nanoTime() - lastHeardNanos;
         }
 
         /** Purpose: queue one complete frame for sending. Never blocks. */
