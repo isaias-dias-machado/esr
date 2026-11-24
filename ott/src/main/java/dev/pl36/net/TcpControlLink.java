@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * DEPRECATED after agent/transport
  * The minimal real implementation of {@link ControlMessenger}: one-shot TCP
  * connections framed with {@link WireCodec}, for the localhost placeholder
  * until the transport workstream lands its full neighbour stack.
